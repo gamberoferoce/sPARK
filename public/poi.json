@@ -1,0 +1,130 @@
+[
+  {
+    "id": "aurora-attr-01",
+    "nome": "Cometa d’Acciaio",
+    "categoria": "attrazione",
+    "posizione": { "lat": 45.46385, "lng": 9.18945 },
+    "coda_minuti": 75,
+    "altezza_minima": 140,
+    "orario_apertura": "10:00",
+    "orario_chiusura": "19:00"
+  },
+  {
+    "id": "aurora-attr-02",
+    "nome": "Nebula Rapids",
+    "categoria": "attrazione",
+    "posizione": { "lat": 45.46335, "lng": 9.18995 },
+    "coda_minuti": 50,
+    "altezza_minima": 120,
+    "orario_apertura": "10:00",
+    "orario_chiusura": "19:00"
+  },
+  {
+    "id": "aurora-attr-03",
+    "nome": "Aurora Wheel",
+    "categoria": "attrazione",
+    "posizione": { "lat": 45.46310, "lng": 9.18885 },
+    "coda_minuti": 20,
+    "altezza_minima": null,
+    "orario_apertura": "10:00",
+    "orario_chiusura": "20:00"
+  },
+  {
+    "id": "aurora-attr-04",
+    "nome": "Bosco Incantato",
+    "categoria": "attrazione",
+    "posizione": { "lat": 45.46255, "lng": 9.18895 },
+    "coda_minuti": 10,
+    "altezza_minima": null,
+    "orario_apertura": "10:00",
+    "orario_chiusura": "18:30"
+  },
+  {
+    "id": "aurora-attr-05",
+    "nome": "Labirinto di Luce",
+    "categoria": "attrazione",
+    "posizione": { "lat": 45.46285, "lng": 9.19035 },
+    "coda_minuti": 35,
+    "altezza_minima": 110,
+    "orario_apertura": "10:30",
+    "orario_chiusura": "19:30"
+  },
+  {
+    "id": "aurora-attr-06",
+    "nome": "Galassia VR Dome",
+    "categoria": "attrazione",
+    "posizione": { "lat": 45.46370, "lng": 9.19020 },
+    "coda_minuti": 60,
+    "altezza_minima": 130,
+    "orario_apertura": "11:00",
+    "orario_chiusura": "19:00"
+  },
+  {
+    "id": "aurora-rist-01",
+    "nome": "Bistrot Polaris",
+    "categoria": "ristoro",
+    "fascia_oraria": ["pranzo", "cena"],
+    "posizione": { "lat": 45.46325, "lng": 9.18920 },
+    "coda_minuti": 18,
+    "alimenti": ["normale", "vegano", "celiaco"],
+    "orario_apertura": "11:30",
+    "orario_chiusura": "20:30"
+  },
+  {
+    "id": "aurora-rist-02",
+    "nome": "Chiosco Meteora",
+    "categoria": "ristoro",
+    "fascia_oraria": ["merenda"],
+    "posizione": { "lat": 45.46295, "lng": 9.18860 },
+    "coda_minuti": 6,
+    "alimenti": ["normale"],
+    "orario_apertura": "10:30",
+    "orario_chiusura": "18:30"
+  },
+  {
+    "id": "aurora-rist-03",
+    "nome": "Trattoria Boreale",
+    "categoria": "ristoro",
+    "fascia_oraria": ["colazione", "pranzo", "merenda"],
+    "posizione": { "lat": 45.46265, "lng": 9.18975 },
+    "coda_minuti": 22,
+    "alimenti": ["normale", "celiaco"],
+    "orario_apertura": "10:00",
+    "orario_chiusura": "19:30"
+  },
+  {
+    "id": "aurora-rist-04",
+    "nome": "Gelateria Lumen",
+    "categoria": "ristoro",
+    "fascia_oraria": ["colazione", "merenda", "cena"],
+    "posizione": { "lat": 45.46355, "lng": 9.18895 },
+    "coda_minuti": 14,
+    "alimenti": ["normale", "vegano"],
+    "orario_apertura": "10:30",
+    "orario_chiusura": "20:00"
+  },
+  {
+    "id": "aurora-wc-01",
+    "nome": "Servizi Igienici - Piazza Aurora",
+    "categoria": "wc",
+    "posizione": { "lat": 45.46305, "lng": 9.18955 },
+    "orario_apertura": "10:00",
+    "orario_chiusura": "20:00"
+  },
+  {
+    "id": "aurora-wc-02",
+    "nome": "Servizi Igienici - Area Bosco",
+    "categoria": "wc",
+    "posizione": { "lat": 45.46240, "lng": 9.18870 },
+    "orario_apertura": "10:00",
+    "orario_chiusura": "19:00"
+  },
+  {
+    "id": "aurora-wc-03",
+    "nome": "Servizi Igienici - Zona Nebula",
+    "categoria": "wc",
+    "posizione": { "lat": 45.46345, "lng": 9.19005 },
+    "orario_apertura": "10:00",
+    "orario_chiusura": "19:30"
+  }
+]
