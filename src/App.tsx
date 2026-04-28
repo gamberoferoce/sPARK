@@ -15,6 +15,7 @@ function App() {
     poi: Poi;
     tipo: "attrazione" | "ristoro";
     tipoAttrazione?: "attrazione" | "post_pranzo" | "ultimo_giro";
+    motivoOverride?: string;
   } | null>(null);
   const [debugPopup, setDebugPopup] = useState<null | "attrazione" | "caffe">(null);
   const [debugPanelOpen, setDebugPanelOpen] = useState(false);
@@ -196,7 +197,10 @@ function App() {
     const best = valutaTriggerAsciugatura(asciugature, pos) as Poi | null;
     if (best && best.notifica_attiva === true) {
       asciugNotifiedRef.current.add(inside.id);
-      onNotificaRistoro(best);
+      // Punchline dedicata asciugatura
+      setPoiPanelOpen(false);
+      setNotificaAttiva({ poi: best, tipo: "ristoro", motivoOverride: "Ti asciughi qui vicino?" });
+      navigator.vibrate?.(200);
     }
   }, [posUtente, pois, onNotificaRistoro]);
 
@@ -221,6 +225,7 @@ function App() {
 
   const motivoNotifica = useMemo(() => {
     if (!notificaAttiva) return "";
+    if (notificaAttiva.motivoOverride) return notificaAttiva.motivoOverride;
     if (notificaAttiva.tipo === "attrazione") {
       const t = notificaAttiva.tipoAttrazione;
       if (t === "post_pranzo") return "Giretto tranquillo post pranzo?";
@@ -233,6 +238,19 @@ function App() {
     if (Array.isArray(trigger) && trigger.includes("gelato")) return "Sei vicino a un chiosco gelato!";
     return "Suggerimento ristoro.";
   }, [notificaAttiva]);
+
+  function formatDistanza(metri: number) {
+    if (!Number.isFinite(metri)) return "—";
+    if (metri < 1000) return `${Math.round(metri)} m`;
+    return `${(metri / 1000).toFixed(1)} km`;
+  }
+
+  const sottotitoloNotifica = useMemo(() => {
+    if (!notificaAttiva) return "";
+    const pos = posUtente ?? posFallback;
+    const d = calcolaDistanza(pos, notificaAttiva.poi.posizione);
+    return `${notificaAttiva.poi.nome} • ${formatDistanza(d)}`;
+  }, [notificaAttiva, posUtente, posFallback]);
 
   const poiDebugAttrazione = useMemo(() => {
     const fromFiltered = poisFiltrati.find((p) => p.categoria === "attrazione");
@@ -345,8 +363,8 @@ function App() {
       <NotificationPopup
         open={notificaAttiva !== null}
         poi={notificaAttiva?.poi ?? null}
-        tipo={notificaAttiva?.tipo}
         motivo={motivoNotifica}
+        sottotitolo={sottotitoloNotifica}
         onChiudi={() => setNotificaAttiva(null)}
         onNaviga={(poi) => {
           if (poi.posizione) {

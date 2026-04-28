@@ -1,5 +1,4 @@
 import {
-  valutaNotificaAttrazione,
   valutaTriggerCaffe,
   valutaTriggerGelato,
   valutaTriggerPostPranzo,
@@ -13,7 +12,6 @@ import { ATTRAZIONI, RISTORI } from "./config.js";
  * - ristori: una notifica per fascia oraria al giorno (indipendente dalle attrazioni)
  */
 export const stato = {
-  attrazioni: { ultimaNotifica: null, ultimaNotificaPerPoi: {} },
   ristori: {
     caffeNotificato: false,
     gelato: { giorno: null, notificato: false },
@@ -22,32 +20,6 @@ export const stato = {
     ultimoGiro: { giorno: null, notificatoPerPoi: {} },
   },
 };
-
-/**
- * Decide se è possibile notificare ora secondo il cooldown globale.
- * @param {number} nowMs
- * @returns {boolean}
- */
-function passaCooldownGlobale(nowMs) {
-  // Se non abbiamo mai notificato, possiamo farlo subito
-  if (stato.attrazioni.ultimaNotifica == null) return true;
-  // Altrimenti verifichiamo che sia passato il tempo minimo
-  return nowMs - stato.attrazioni.ultimaNotifica >= ATTRAZIONI.cooldown_globale_ms;
-}
-
-/**
- * Decide se è possibile notificare questo POI secondo il cooldown per-POI.
- * @param {string} poiId
- * @param {number} nowMs
- * @returns {boolean}
- */
-function passaCooldownPoi(poiId, nowMs) {
-  const last = stato.attrazioni.ultimaNotificaPerPoi[poiId];
-  // Se questo POI non è mai stato notificato, è notificabile
-  if (last == null) return true;
-  // Altrimenti deve essere passato il tempo minimo
-  return nowMs - last >= ATTRAZIONI.cooldown_poi_ms;
-}
 
 function todayYmd(nowMs) {
   const d = new Date(nowMs);
@@ -95,35 +67,35 @@ export function valutaTuttiIPoi(pois, posUtente, onNotificaAttrazione, onNotific
   const ristori = list.filter((p) => p && p.categoria === "ristoro");
 
   // -----------------------------
-  // CANALE ATTRAZIONI
+  // NOTIFICHE MANUALI (UNIVERSALI)
   // -----------------------------
-  // Cooldown globale: se non passa, non notifichiamo attrazioni (ma i ristori restano indipendenti)
-  if (passaCooldownGlobale(nowMs)) {
-    let miglioreAttrazione = null;
-    let migliorCoda = Infinity;
+  // Qualsiasi POI: se notifica_attiva e coda sotto soglia → notifica, con cooldown 60min per POI
+  {
+    let best = null;
+    let bestCoda = Infinity;
 
-    for (const poi of attrazioni) {
-      // Guard: salta silenziosamente POI senza id
+    for (const poi of list) {
       if (!poi || !poi.id) continue;
-
-      // Cooldown per POI
-      if (!passaCooldownPoi(poi.id, nowMs)) continue;
-
-      if (!valutaNotificaAttrazione(poi)) continue;
+      if (poi.notifica_attiva !== true) continue;
+      if (!passaCooldownManuale(poi.id, nowMs)) continue;
 
       const coda = Number(poi.coda_minuti);
       if (!Number.isFinite(coda)) continue;
-      if (coda < migliorCoda) {
-        miglioreAttrazione = poi;
-        migliorCoda = coda;
+      if (coda >= ATTRAZIONI.soglia_coda_assoluta) continue;
+
+      if (coda < bestCoda) {
+        best = poi;
+        bestCoda = coda;
       }
     }
 
-    if (miglioreAttrazione) {
-      stato.attrazioni.ultimaNotifica = nowMs;
-      stato.attrazioni.ultimaNotificaPerPoi[miglioreAttrazione.id] = nowMs;
-
-      if (typeof onNotificaAttrazione === "function") onNotificaAttrazione(miglioreAttrazione);
+    if (best) {
+      stato.ristori.ultimaNotificaManualePerPoi[best.id] = nowMs;
+      if (best.categoria === "attrazione") {
+        if (typeof onNotificaAttrazione === "function") onNotificaAttrazione(best);
+      } else {
+        if (typeof onNotificaRistoro === "function") onNotificaRistoro(best);
+      }
     }
   }
 
@@ -170,18 +142,6 @@ export function valutaTuttiIPoi(pois, posUtente, onNotificaAttrazione, onNotific
       if (typeof onNotificaRistoro === "function") onNotificaRistoro(poi);
       break;
     }
-  }
-
-  // Caso 3: trigger pranzo/cena manuale, solo se notifica_attiva e cooldown 1h per POI
-  for (const poi of ristori) {
-    if (!poi || !poi.id) continue;
-    const isPranzo = Array.isArray(poi.trigger) && poi.trigger.includes("pranzo");
-    const isCena = Array.isArray(poi.trigger) && poi.trigger.includes("cena");
-    if (!isPranzo && !isCena) continue;
-    if (poi.notifica_attiva !== true) continue;
-    if (!passaCooldownManuale(poi.id, nowMs)) continue;
-    stato.ristori.ultimaNotificaManualePerPoi[poi.id] = nowMs;
-    if (typeof onNotificaRistoro === "function") onNotificaRistoro(poi);
   }
 }
 

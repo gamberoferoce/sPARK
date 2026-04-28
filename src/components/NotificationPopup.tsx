@@ -8,6 +8,7 @@ type Props = {
   open: boolean;
   poi: Poi | null;
   motivo: string;
+  sottotitolo?: string;
   onClose?: () => void;
   onChiudi?: () => void;
   onNaviga: (poi: Poi) => void;
@@ -15,29 +16,19 @@ type Props = {
   tipo?: "attrazione" | "ristoro";
 };
 
-function codaBadgeClasses(minuti: number) {
-  if (minuti < 15) return "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-500/30";
-  if (minuti <= 45) return "bg-yellow-500/15 text-yellow-200 ring-1 ring-yellow-500/30";
-  return "bg-rose-500/15 text-rose-200 ring-1 ring-rose-500/30";
-}
-
 export function NotificationPopup({
   open,
   poi,
   motivo,
+  sottotitolo,
   onClose,
   onChiudi,
   onNaviga,
-  variant = "default",
-  tipo,
 }: Props) {
   const visible = open && !!poi;
-  const coda = typeof poi?.coda_minuti === "number" ? poi.coda_minuti : 0;
   const close = onClose ?? onChiudi ?? (() => {});
-  const inferredIsCaffe =
-    (variant === "caffe") ||
-    (tipo === "ristoro" && Array.isArray(poi?.trigger) && poi.trigger.includes("caffe"));
-  const isCaffe = inferredIsCaffe;
+  // UI uniforme: usa sempre il layout "caffè" per tutte le notifiche
+  const isCaffe = true;
 
   return (
     <AnimatePresence>
@@ -71,24 +62,14 @@ export function NotificationPopup({
                     <MapPin className="h-4 w-4 text-zinc-200" />
                   </span>
                   <div className="min-w-0">
-                    <div className="truncate text-base font-semibold text-zinc-100">{poi!.nome}</div>
-                    {!isCaffe ? (
-                      <div className="mt-1 flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",
-                            codaBadgeClasses(coda),
-                          )}
-                        >
-                          {coda} min
-                        </span>
-                        <span className="text-xs text-zinc-400">Suggerimento</span>
-                      </div>
-                    ) : null}
+                    <div className="truncate text-base font-semibold text-zinc-100">{motivo}</div>
+                    <div className="mt-0.5 truncate text-xs text-zinc-400">
+                      {sottotitolo ?? poi!.nome}
+                    </div>
                   </div>
                 </div>
 
-                <p className="mt-3 text-sm leading-snug text-zinc-200/90">{motivo}</p>
+                <p className="mt-3 text-sm leading-snug text-zinc-200/90">{poi!.nome}</p>
               </div>
 
               <div
