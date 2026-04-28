@@ -1,5 +1,4 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
 import { ArrowUpRight, Bell, MapPin, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Poi, Categoria } from "@/types/poi";
@@ -197,26 +196,23 @@ export function POIList({
               style={{ backgroundColor: BG }}
             >
               {/* Card pill: padding generoso; campanella metà sopra il bordo superiore */}
-              <motion.div
+              <div
                 className={cn(
                   "group relative overflow-visible",
                   fullBleed ? "w-full" : "ml-auto w-[360px] max-w-full",
                 )}
-                initial="rest"
-                whileHover="hover"
               >
-                  <motion.div
-                    className="relative w-full overflow-visible rounded-full py-2.5 pl-3.5 pr-10"
-                    style={{
-                      backgroundColor: CARD_BG,
-                      border: `1px solid ${LINE}`,
-                    }}
-                    variants={{
-                      rest: { x: 0 },
-                      hover: { x: -96 },
-                    }}
-                    transition={{ type: "spring", stiffness: 520, damping: 42 }}
-                  >
+                <div
+                  className={cn(
+                    "relative w-full overflow-visible rounded-full py-2.5 pl-3.5 pr-10",
+                    "transition-transform duration-300 ease-out motion-reduce:transition-none",
+                    "group-hover:-translate-x-24", // 96px
+                  )}
+                  style={{
+                    backgroundColor: CARD_BG,
+                    border: `1px solid ${LINE}`,
+                  }}
+                >
                   <div className="flex min-w-0 items-center gap-2">
                   <span
                     className="inline-flex size-10 shrink-0 items-center justify-center rounded-full"
@@ -268,7 +264,7 @@ export function POIList({
                       <Bell className="size-[15px] drop-shadow-sm" strokeWidth={2.25} />
                     </div>
                   ) : null}
-                  </motion.div>
+                </div>
 
                   {/* Azioni su hover: fuori dalla card, a destra */}
                   <div
@@ -313,7 +309,7 @@ export function POIList({
                       <ArrowUpRight className="size-[16px] drop-shadow-sm" strokeWidth={2.25} />
                     </button>
                   </div>
-                </motion.div>
+              </div>
 
               {/* aria: spazio dopo ultima card */}
               {idx === sorted.length - 1 ? <div className="h-1" /> : null}

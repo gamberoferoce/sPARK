@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { POIList } from "@/components/POIList";
 import { Onboarding, type ProfiloUtente } from "@/components/Onboarding";
 import { NotificationPopup } from "@/components/NotificationPopup";
@@ -304,69 +303,50 @@ function App() {
 
   return (
     <main className="relative mx-auto w-full max-w-lg overflow-x-visible bg-[#000000] px-4 py-4">
-      <AnimatePresence initial={false}>
-        {poiPanelOpen ? (
-          <motion.div
-            className="fixed right-0 top-0 z-40 overflow-visible"
-            style={{ width: "50vw" }}
-            initial={{ y: -16, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -16, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 520, damping: 42 }}
-          >
-            <div className="absolute right-2 top-2 z-50">
-              <motion.button
-                type="button"
-                className="h-6 w-10 rounded-full bg-zinc-950/80 ring-1 ring-white/10 backdrop-blur"
-                aria-label="Chiudi pannello POI"
-                drag="y"
-                dragSnapToOrigin
-                dragElastic={0.12}
-                onDragEnd={(_, info) => {
-                  if (info.offset.y < -30 || info.velocity.y < -600) setPoiPanelOpen(false);
-                }}
-                onClick={() => setPoiPanelOpen(false)}
-              />
-            </div>
+      {poiPanelOpen ? (
+        <div
+          className="fixed right-0 top-0 z-40 overflow-visible transition-transform duration-300 ease-out"
+          style={{ width: "50vw", transform: "translateY(0px)" }}
+        >
+          <div className="absolute right-2 top-2 z-50">
+            <button
+              type="button"
+              className="h-6 w-10 rounded-full bg-zinc-950/80 ring-1 ring-white/10 backdrop-blur"
+              aria-label="Chiudi pannello POI"
+              onClick={() => setPoiPanelOpen(false)}
+            />
+          </div>
 
-            <div className="pointer-events-auto">
-              <POIList
-                fullBleed={false}
-                pois={poisFiltrati}
-                posUtente={posUtente ?? posFallback}
-                bellById={bellById}
-                onToggleBell={(id) => {
-                  setBellById((prev) => ({ ...prev, [id]: !(prev[id] === true) }));
-                  setPois((prev) => prev.map((p) => (p?.id === id ? { ...p, notifica_attiva: !(p.notifica_attiva === true) } : p)));
-                }}
-                onNaviga={(poi) => {
-                  setPoiPanelOpen(false);
-                  setMapDest(poi);
-                  setMapOpen(true);
-                }}
-                calcolaDistanzaM={(poiPos) => calcolaDistanza(posUtente ?? posFallback, poiPos)}
-              />
-            </div>
-          </motion.div>
-        ) : (
-          <motion.button
-            type="button"
-            className="fixed right-2 top-2 z-40 h-6 w-10 rounded-full bg-zinc-950/80 ring-1 ring-white/10 backdrop-blur"
-            aria-label="Apri pannello POI"
-            initial={{ y: -12, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -12, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 520, damping: 42 }}
-            drag="y"
-            dragSnapToOrigin
-            dragElastic={0.16}
-            onDragEnd={(_, info) => {
-              if (info.offset.y > 30 || info.velocity.y > 600) setPoiPanelOpen(true);
-            }}
-            onClick={() => setPoiPanelOpen(true)}
-          />
-        )}
-      </AnimatePresence>
+          <div className="pointer-events-auto">
+            <POIList
+              fullBleed={false}
+              pois={poisFiltrati}
+              posUtente={posUtente ?? posFallback}
+              bellById={bellById}
+              onToggleBell={(id) => {
+                setBellById((prev) => ({ ...prev, [id]: !(prev[id] === true) }));
+                setPois((prev) =>
+                  prev.map((p) => (p?.id === id ? { ...p, notifica_attiva: !(p.notifica_attiva === true) } : p)),
+                );
+              }}
+              onNaviga={(poi) => {
+                setPoiPanelOpen(false);
+                setMapDest(poi);
+                setMapOpen(true);
+              }}
+              calcolaDistanzaM={(poiPos) => calcolaDistanza(posUtente ?? posFallback, poiPos)}
+            />
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="fixed right-2 top-2 z-40 h-6 w-10 rounded-full bg-zinc-950/80 ring-1 ring-white/10 backdrop-blur transition-transform duration-300 ease-out"
+          aria-label="Apri pannello POI"
+          style={{ transform: "translateY(0px)" }}
+          onClick={() => setPoiPanelOpen(true)}
+        />
+      )}
 
       <NotificationPopup
         open={notificaAttiva !== null}

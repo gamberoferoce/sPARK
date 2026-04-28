@@ -6,7 +6,6 @@ import {
   type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { motion, useMotionValue, useTransform, type MotionValue } from "framer-motion";
 import { Ruler, Sparkles, UtensilsCrossed, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -58,17 +57,18 @@ function scaleOpacityFromSlotDistance(d: number): { scale: number; opacity: numb
 function HeightTick({
   index,
   label,
-  scrollLeftMv,
+  scrollLeft,
   sidePadRef,
   viewportWRef,
 }: {
   index: number;
   label: number;
-  scrollLeftMv: MotionValue<number>;
+  scrollLeft: number;
   sidePadRef: MutableRefObject<number>;
   viewportWRef: MutableRefObject<number>;
 }) {
-  const scale = useTransform(scrollLeftMv, (sl) => {
+  const scale = useMemo(() => {
+    const sl = scrollLeft;
     const side = sidePadRef.current;
     const vw = viewportWRef.current;
     if (vw <= 0 || side < 0) return 0.9;
@@ -77,8 +77,10 @@ function HeightTick({
     const viewportCenterContent = sl + vpHalf;
     const d = (viewportCenterContent - itemCenter) / HEIGHT_ITEM_PX;
     return scaleOpacityFromSlotDistance(d).scale;
-  });
-  const opacity = useTransform(scrollLeftMv, (sl) => {
+  }, [index, scrollLeft, sidePadRef, viewportWRef]);
+
+  const opacity = useMemo(() => {
+    const sl = scrollLeft;
     const side = sidePadRef.current;
     const vw = viewportWRef.current;
     if (vw <= 0 || side < 0) return 0.32;
@@ -87,8 +89,10 @@ function HeightTick({
     const viewportCenterContent = sl + vpHalf;
     const d = (viewportCenterContent - itemCenter) / HEIGHT_ITEM_PX;
     return scaleOpacityFromSlotDistance(d).opacity;
-  });
-  const color = useTransform(scrollLeftMv, (sl) => {
+  }, [index, scrollLeft, sidePadRef, viewportWRef]);
+
+  const color = useMemo(() => {
+    const sl = scrollLeft;
     const side = sidePadRef.current;
     const vw = viewportWRef.current;
     if (vw <= 0 || side < 0) return 0;
@@ -97,25 +101,25 @@ function HeightTick({
     const viewportCenterContent = sl + vpHalf;
     const d = Math.abs((viewportCenterContent - itemCenter) / HEIGHT_ITEM_PX);
     return d < 0.55 ? 1 : 0;
-  });
-  const textColor = useTransform(color, (c) => (c > 0.5 ? "rgb(244 244 245)" : "rgb(161 161 170)"));
-  const fontWeight = useTransform(color, (c) => (c > 0.5 ? 600 : 500));
+  }, [index, scrollLeft, sidePadRef, viewportWRef]);
+  const textColor = color > 0.5 ? "rgb(244 244 245)" : "rgb(161 161 170)";
+  const fontWeight = color > 0.5 ? 600 : 500;
 
   return (
-    <motion.div
+    <div
       style={{
         width: HEIGHT_ITEM_PX,
         flex: `0 0 ${HEIGHT_ITEM_PX}px`,
-        scale,
+        transform: `scale(${scale})`,
         opacity,
         color: textColor,
         fontWeight,
       }}
-      className="pointer-events-none snap-center scroll-mx-0 py-2 text-center text-sm tabular-nums will-change-transform"
+      className="pointer-events-none snap-center scroll-mx-0 py-2 text-center text-sm tabular-nums transition-[transform,opacity] duration-200 will-change-transform motion-reduce:transition-none"
       aria-hidden
     >
       {label}
-    </motion.div>
+    </div>
   );
 }
 
@@ -135,13 +139,13 @@ function HeightCenterCarousel({
   const [viewportW, setViewportW] = useState(0);
   const sidePadRef = useRef(0);
   const viewportWRef = useRef(0);
-  const scrollLeftMv = useMotionValue(0);
-  const centerLineOpacity = useTransform(scrollLeftMv, (sl) => {
-    const cell = sl / HEIGHT_ITEM_PX;
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const centerLineOpacity = useMemo(() => {
+    const cell = scrollLeft / HEIGHT_ITEM_PX;
     const frac = cell - Math.floor(cell);
     const d = Math.min(frac, 1 - frac) * 2;
     return 0.22 + (1 - d) * 0.2;
-  });
+  }, [scrollLeft]);
   const valueRef = useRef(value);
   const scrollRaf = useRef(0);
   valueRef.current = value;
@@ -169,15 +173,15 @@ function HeightCenterCarousel({
     const v = valueRef.current;
     const i = Math.max(0, Math.min(HEIGHTS.length - 1, v - HEIGHT_MIN));
     el.scrollLeft = i * HEIGHT_ITEM_PX;
-    scrollLeftMv.set(el.scrollLeft);
-  }, [active, sidePad, scrollLeftMv]);
+    setScrollLeft(el.scrollLeft);
+  }, [active, sidePad]);
 
   const commitFromScroll = () => {
     const el = scrollerRef.current;
     if (!el) return;
     cancelAnimationFrame(scrollRaf.current);
     scrollRaf.current = requestAnimationFrame(() => {
-      scrollLeftMv.set(el.scrollLeft);
+      setScrollLeft(el.scrollLeft);
       const i = Math.round(el.scrollLeft / HEIGHT_ITEM_PX);
       const clamped = Math.max(0, Math.min(HEIGHTS.length - 1, i));
       const cm = HEIGHT_MIN + clamped;
@@ -187,7 +191,7 @@ function HeightCenterCarousel({
 
   const syncScrollMotion = () => {
     const el = scrollerRef.current;
-    if (el) scrollLeftMv.set(el.scrollLeft);
+    if (el) setScrollLeft(el.scrollLeft);
   };
 
   const scrollToCm = (cm: number, behavior: ScrollBehavior = "smooth") => {
@@ -238,7 +242,7 @@ function HeightCenterCarousel({
   return (
     <div ref={measureRef} className="mt-4">
       <div className="relative -mx-1">
-        <motion.div
+        <div
           className="pointer-events-none absolute bottom-1 left-1/2 top-1 z-10 w-px -translate-x-1/2 bg-white"
           style={{ opacity: centerLineOpacity }}
           aria-hidden
@@ -253,7 +257,7 @@ function HeightCenterCarousel({
           aria-label="Altezza in centimetri"
           tabIndex={0}
           onScroll={() => {
-            scrollLeftMv.set(scrollerRef.current?.scrollLeft ?? 0);
+            setScrollLeft(scrollerRef.current?.scrollLeft ?? 0);
             commitFromScroll();
           }}
           onPointerDown={handlePointerDown}
@@ -284,7 +288,7 @@ function HeightCenterCarousel({
                 key={h}
                 index={h - HEIGHT_MIN}
                 label={h}
-                scrollLeftMv={scrollLeftMv}
+                scrollLeft={scrollLeft}
                 sidePadRef={sidePadRef}
                 viewportWRef={viewportWRef}
               />
