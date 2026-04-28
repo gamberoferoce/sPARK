@@ -2,21 +2,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-type Poi = {
-  id: string;
-  nome: string;
-  categoria: "attrazione" | "ristoro" | "wc";
-  coda_minuti?: number;
-};
+import type { Poi } from "@/types/poi";
 
 type Props = {
   open: boolean;
   poi: Poi | null;
   motivo: string;
-  onClose: () => void;
+  onClose?: () => void;
+  onChiudi?: () => void;
   onNaviga: (poi: Poi) => void;
   variant?: "default" | "caffe";
+  tipo?: "attrazione" | "ristoro";
 };
 
 function codaBadgeClasses(minuti: number) {
@@ -30,18 +26,24 @@ export function NotificationPopup({
   poi,
   motivo,
   onClose,
+  onChiudi,
   onNaviga,
   variant = "default",
+  tipo,
 }: Props) {
   const visible = open && !!poi;
   const coda = typeof poi?.coda_minuti === "number" ? poi.coda_minuti : 0;
-  const isCaffe = variant === "caffe";
+  const close = onClose ?? onChiudi ?? (() => {});
+  const inferredIsCaffe =
+    (variant === "caffe") ||
+    (tipo === "ristoro" && Array.isArray(poi?.trigger) && poi.trigger.includes("caffe"));
+  const isCaffe = inferredIsCaffe;
 
   return (
     <AnimatePresence>
       {visible ? (
         <motion.div
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-50 flex items-center justify-center px-3"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -50,19 +52,19 @@ export function NotificationPopup({
             type="button"
             className="absolute inset-0 bg-black/55"
             aria-label="Chiudi notifica"
-            onClick={onClose}
+            onClick={close}
           />
 
           <motion.div
             role="dialog"
             aria-modal="true"
-            className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-lg"
-            initial={{ y: 24, opacity: 0 }}
+            className="w-full max-w-lg"
+            initial={{ y: -24, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 24, opacity: 0 }}
+            exit={{ y: -24, opacity: 0 }}
             transition={{ type: "spring", stiffness: 420, damping: 36 }}
           >
-            <div className="mx-3 mb-3 rounded-2xl bg-zinc-950/80 p-4 ring-1 ring-white/10 backdrop-blur">
+            <div className="rounded-2xl bg-zinc-950/80 p-4 ring-1 ring-white/10 backdrop-blur">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10">
@@ -105,7 +107,7 @@ export function NotificationPopup({
                 <Button
                   variant="outline"
                   className={cn("bg-transparent", isCaffe ? "w-full min-w-0 justify-center" : "")}
-                  onClick={onClose}
+                  onClick={close}
                 >
                   Non ora
                 </Button>

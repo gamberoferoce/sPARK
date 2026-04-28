@@ -10,23 +10,23 @@ import { motion, useMotionValue, useTransform, type MotionValue } from "framer-m
 import { Ruler, Sparkles, UtensilsCrossed, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export type Adrenalina = "bassa" | "media" | "alta";
+export type Intensita = "bassa" | "media" | "alta";
 export type Dieta = "normale" | "vegano" | "celiaco";
 
 export type ProfiloUtente = {
   altezza_cm: number;
   diete: Dieta[];
-  adrenalina: Adrenalina[];
+  intensita: Intensita[];
 };
 
 type Props = {
   onComplete: (profilo: ProfiloUtente) => void;
 };
 
-const ALL_ADRENALINA: Adrenalina[] = ["bassa", "media", "alta"];
+const ALL_INTENSITA: Intensita[] = ["bassa", "media", "alta"];
 const ALL_DIETE: Dieta[] = ["normale", "vegano", "celiaco"];
 
-const STEP_LABELS = ["Intro", "Altezza", "Dieta", "Adrenalina"] as const;
+const STEP_LABELS = ["Intro", "Altezza", "Dieta", "Intensità"] as const;
 const STEP_ICONS = [Sparkles, Ruler, UtensilsCrossed, Zap] as const;
 
 const HEIGHT_MIN = 90;
@@ -304,7 +304,7 @@ export function Onboarding({ onComplete }: Props) {
     vegano: false,
     celiaco: false,
   });
-  const [adrenalina, setAdrenalina] = useState<Record<Adrenalina, boolean>>({
+  const [intensita, setIntensita] = useState<Record<Intensita, boolean>>({
     bassa: false,
     media: false,
     alta: false,
@@ -312,13 +312,13 @@ export function Onboarding({ onComplete }: Props) {
 
   const profilo = useMemo<ProfiloUtente>(() => {
     const dieteSel = ALL_DIETE.filter((d) => diete[d]);
-    const adrSel = ALL_ADRENALINA.filter((a) => adrenalina[a]);
+    const sel = ALL_INTENSITA.filter((i) => intensita[i]);
     return {
       altezza_cm: altezza,
       diete: dieteSel.length ? dieteSel : ["normale"],
-      adrenalina: adrSel.length ? adrSel : ALL_ADRENALINA,
+      intensita: sel.length ? sel : ALL_INTENSITA,
     };
-  }, [altezza, diete, adrenalina]);
+  }, [altezza, diete, intensita]);
 
   const StepIcon = STEP_ICONS[step];
 
@@ -412,18 +412,18 @@ export function Onboarding({ onComplete }: Props) {
 
                     {step === 3 ? (
                       <div>
-                        <div className="text-sm font-semibold text-zinc-100">Livello adrenalina</div>
+                        <div className="text-sm font-semibold text-zinc-100">Livello intensità</div>
                         <p className="mt-0.5 text-xs text-zinc-400">Filtreremo le attrazioni per intensità.</p>
 
                         <div className="mt-4 space-y-3">
-                          {ALL_ADRENALINA.map((a) => {
-                            const on = adrenalina[a];
+                          {ALL_INTENSITA.map((a) => {
+                            const on = intensita[a];
                             return (
                               <button
                                 key={a}
                                 type="button"
                                 aria-pressed={on}
-                                onClick={() => setAdrenalina((prev) => ({ ...prev, [a]: !prev[a] }))}
+                                onClick={() => setIntensita((prev) => ({ ...prev, [a]: !prev[a] }))}
                                 className={[
                                   "w-full rounded-[3rem] px-3 py-3 text-left text-sm font-semibold capitalize ring-1 transition-colors",
                                   on

@@ -1,4 +1,4 @@
-import { ATTRAZIONI, RISTORI } from "./config.js";
+import { ATTRAZIONI, RISTORI, SMART_TRIGGERS } from "./config.js";
 
 /**
  * Calcola la distanza tra due coordinate GPS usando la formula di Haversine.
@@ -31,93 +31,127 @@ export function calcolaDistanza(posUtente, poiPosizione) {
   return R * c;
 }
 
-/**
- * Calcola un punteggio (0-10) per notificare una attrazione.
- *
- * Regole:
- * - Calcola la media della coda di tutte le attrazioni.
- * - Se la coda del POI è > 60% della media, restituisce 0 (non notificabile).
- * - Altrimenti:
- *    - coda pesa 70%
- *    - distanza pesa 30%
- * - Distanza massima considerata: 500m (oltre: punteggio distanza = 0)
- *
- * @param {Object} poi
- * @param {Array<Object>} tutteLeAttrazioni
- * @param {{lat:number, lng:number}} posUtente
- * @returns {number} punteggio numerico 0-10
- */
-export function calcolaPunteggioAttrazione(poi, tutteLeAttrazioni, posUtente) {
-  // Se non ho attrazioni su cui calcolare la media, non posso valutare in modo sensato
-  if (!Array.isArray(tutteLeAttrazioni) || tutteLeAttrazioni.length === 0) return 0;
-
-  // Media coda (in minuti) su tutte le attrazioni
-  const sommaCode = tutteLeAttrazioni.reduce((acc, a) => acc + (Number(a.coda_minuti) || 0), 0);
-  const mediaCoda = sommaCode / tutteLeAttrazioni.length;
-
-  // Se la coda del POI è troppo alta rispetto alla media, non notifichiamo
-  // (condizione: maggiore del 60% della media → 0)
-  if ((Number(poi.coda_minuti) || 0) > ATTRAZIONI.soglia_coda_relativa * mediaCoda) return 0;
-
-  // Distanza in metri tra utente e attrazione
-  const distanza = calcolaDistanza(posUtente, poi.posizione);
-
-  // Normalizzazione distanza: 0..1 dove 0m => 1, 500m => 0, oltre 500m => 0
-  const distanzaMax = ATTRAZIONI.distanza_max;
-  const distanzaNorm = Math.max(0, 1 - Math.min(distanza, distanzaMax) / distanzaMax);
-
-  // Normalizzazione coda: vogliamo premiare code più basse.
-  // Usiamo una scala relativa alla media:
-  // - coda = 0  => codaNorm = 1
-  // - coda = media => codaNorm ~ 0
-  // - coda > media => codaNorm = 0
-  // (questa scelta mantiene un range stabile senza dipendere da un "massimo" globale)
-  const coda = Number(poi.coda_minuti) || 0;
-  const codaNorm = mediaCoda > 0 ? Math.max(0, 1 - coda / mediaCoda) : 0;
-
-  // Combinazione pesata e conversione in scala 0-10
-  const pesoCoda = ATTRAZIONI.peso_coda;
-  const pesoDistanza = ATTRAZIONI.peso_distanza;
-  const score01 = pesoCoda * codaNorm + pesoDistanza * distanzaNorm;
-  const score010 = score01 * 10;
-
-  // Arrotondamento “soft” a 2 decimali per stabilità (senza perdere granularità)
-  return Math.round(score010 * 100) / 100;
+export function valutaNotificaAttrazione(poi) {
+  return poi?.notifica_attiva === true && Number(poi?.coda_minuti) < ATTRAZIONI.soglia_coda_assoluta;
 }
 
-/**
- * Calcola un punteggio (0-10) per confrontare ristori tra loro.
- *
- * Regole:
- * - Coda pesa 70%:
- *    - normalizzata 0-1 dove 0 min = 1, 20 min = 0, oltre 20 = 0
- * - Distanza pesa 30%:
- *    - normalizzata 0-1 dove 0m = 1, 500m = 0, oltre 500 = 0
- * - Restituisce punteggio 0-10 arrotondato a 2 decimali
- *
- * @param {Object} poi
- * @param {{lat:number, lng:number}} posUtente
- * @returns {number}
- */
-export function calcolaPunteggioRistoro(poi, posUtente) {
-  // Distanza in metri tra utente e ristoro
+export function valutaTriggerCaffe(tutteLeAttrazioni) {
+  if (!Array.isArray(tutteLeAttrazioni) || tutteLeAttrazioni.length === 0) return false;
+  let min = Infinity;
+  for (const a of tutteLeAttrazioni) {
+    const c = Number(a?.coda_minuti);
+    if (!Number.isFinite(c)) continue;
+    if (c < min) min = c;
+  }
+  if (!Number.isFinite(min)) return false;
+  return min > RISTORI.soglia_coda_minima_caffe;
+}
+
+export function valutaTriggerGelato(poi, posUtente) {
+  const now = new Date();
+  const ora = now.getHours();
+  if (ora < RISTORI.fascia_gelato.inizio || ora >= RISTORI.fascia_gelato.fine) return false;
+  if (!poi?.posizione || !posUtente) return false;
   const distanza = calcolaDistanza(posUtente, poi.posizione);
+  return Number.isFinite(distanza) && distanza < RISTORI.distanza_gelato;
+}
 
-  // Normalizzazione distanza: 0..1 dove 0m => 1, 500m => 0, oltre 500m => 0
-  const distanzaMax = RISTORI.distanza_max;
-  const distanzaNorm = Math.max(0, 1 - Math.min(distanza, distanzaMax) / distanzaMax);
+function oraToMinuti(oraStr) {
+  if (typeof oraStr !== "string") return null;
+  const m = oraStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+  return hh * 60 + mm;
+}
 
-  // Normalizzazione coda: 0..1 dove 0min => 1, 20min => 0, oltre 20 => 0
-  const coda = Number(poi.coda_minuti) || 0;
-  const codaMax = RISTORI.coda_max;
-  const codaNorm = Math.max(0, 1 - Math.min(coda, codaMax) / codaMax);
+function minutiAllaChiusura(poi, now = new Date()) {
+  const closeMin = oraToMinuti(poi?.orario_chiusura);
+  if (closeMin == null) return null;
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return closeMin - nowMin;
+}
 
-  // Combinazione pesata e conversione in scala 0-10
-  const pesoCoda = RISTORI.peso_coda;
-  const pesoDistanza = RISTORI.peso_distanza;
-  const score01 = pesoCoda * codaNorm + pesoDistanza * distanzaNorm;
-  const score010 = score01 * 10;
+export function valutaTriggerPostPranzo(attrazioni, posUtente) {
+  if (!posUtente) return null;
 
-  return Math.round(score010 * 100) / 100;
+  const now = new Date();
+  const ora = now.getHours();
+  if (ora < SMART_TRIGGERS.fascia_post_pranzo.inizio || ora >= SMART_TRIGGERS.fascia_post_pranzo.fine) {
+    return null;
+  }
+
+  const list = Array.isArray(attrazioni) ? attrazioni : [];
+  let best = null;
+  let bestD = Infinity;
+
+  for (const poi of list) {
+    if (!poi || !poi.id) continue;
+    const intensita = poi?.["intensità"];
+    if (intensita !== "bassa") continue;
+    const coda = Number(poi.coda_minuti);
+    if (!Number.isFinite(coda) || coda >= SMART_TRIGGERS.soglia_coda_post_pranzo) continue;
+    if (!poi.posizione) continue;
+
+    const d = calcolaDistanza(posUtente, poi.posizione);
+    if (!Number.isFinite(d)) continue;
+    if (d < bestD) {
+      best = poi;
+      bestD = d;
+    }
+  }
+
+  return best;
+}
+
+export function valutaTriggerUltimoGiro(attrazioni, posUtente) {
+  if (!posUtente) return null;
+
+  const list = Array.isArray(attrazioni) ? attrazioni : [];
+  let best = null;
+  let bestD = Infinity;
+
+  for (const poi of list) {
+    if (!poi || !poi.id) continue;
+    if (poi.notifica_attiva !== true) continue;
+
+    const coda = Number(poi.coda_minuti);
+    if (!Number.isFinite(coda) || coda >= SMART_TRIGGERS.soglia_coda_ultimo_giro) continue;
+
+    const mins = minutiAllaChiusura(poi);
+    if (!Number.isFinite(mins)) continue;
+    if (mins < 0 || mins > SMART_TRIGGERS.minuti_pre_chiusura) continue;
+
+    if (!poi.posizione) continue;
+    const d = calcolaDistanza(posUtente, poi.posizione);
+    if (!Number.isFinite(d)) continue;
+
+    if (d < bestD) {
+      best = poi;
+      bestD = d;
+    }
+  }
+
+  return best;
+}
+
+export function valutaTriggerAsciugatura(poiAsciugatura, posUtente) {
+  if (!posUtente) return null;
+  const list = Array.isArray(poiAsciugatura) ? poiAsciugatura : [];
+  let best = null;
+  let bestD = Infinity;
+  for (const poi of list) {
+    if (!poi || !poi.id || !poi.posizione) continue;
+    const d = calcolaDistanza(posUtente, poi.posizione);
+    if (!Number.isFinite(d)) continue;
+    if (d > 300) continue;
+    if (d < bestD) {
+      best = poi;
+      bestD = d;
+    }
+  }
+  return best;
 }
 

@@ -1,5 +1,11 @@
-import { calcolaPunteggioAttrazione, calcolaPunteggioRistoro } from "./algorithm.js";
-import { ATTRAZIONI, FASCE_ORARIE, RISTORI } from "./config.js";
+import {
+  valutaNotificaAttrazione,
+  valutaTriggerCaffe,
+  valutaTriggerGelato,
+  valutaTriggerPostPranzo,
+  valutaTriggerUltimoGiro,
+} from "./algorithm.js";
+import { ATTRAZIONI, RISTORI } from "./config.js";
 
 /**
  * Stato in-memory per gestire le notifiche su due canali separati:
@@ -7,25 +13,15 @@ import { ATTRAZIONI, FASCE_ORARIE, RISTORI } from "./config.js";
  * - ristori: una notifica per fascia oraria al giorno (indipendente dalle attrazioni)
  */
 export const stato = {
-  attrazioni: {
-    ultimaNotifica: null,
-    ultimaNotificaPerPoi: {},
-  },
+  attrazioni: { ultimaNotifica: null, ultimaNotificaPerPoi: {} },
   ristori: {
-    // Stringa YYYY-MM-DD dell'ultima volta che abbiamo resettato le fasce
-    giorno: null,
-    fasceNotificateOggi: {
-      colazione: false,
-      pranzo: false,
-      merenda: false,
-      cena: false,
-    },
+    caffeNotificato: false,
+    gelato: { giorno: null, notificato: false },
+    ultimaNotificaManualePerPoi: {},
+    postPranzo: { giorno: null, notificato: false },
+    ultimoGiro: { giorno: null, notificatoPerPoi: {} },
   },
 };
-
-// Canale attrazioni: cooldown centralizzati in config
-export const COOLDOWN_GLOBALE = ATTRAZIONI.cooldown_globale_ms;
-export const COOLDOWN_POI = ATTRAZIONI.cooldown_poi_ms;
 
 /**
  * Decide se è possibile notificare ora secondo il cooldown globale.
@@ -36,7 +32,7 @@ function passaCooldownGlobale(nowMs) {
   // Se non abbiamo mai notificato, possiamo farlo subito
   if (stato.attrazioni.ultimaNotifica == null) return true;
   // Altrimenti verifichiamo che sia passato il tempo minimo
-  return nowMs - stato.attrazioni.ultimaNotifica >= COOLDOWN_GLOBALE;
+  return nowMs - stato.attrazioni.ultimaNotifica >= ATTRAZIONI.cooldown_globale_ms;
 }
 
 /**
@@ -50,120 +46,76 @@ function passaCooldownPoi(poiId, nowMs) {
   // Se questo POI non è mai stato notificato, è notificabile
   if (last == null) return true;
   // Altrimenti deve essere passato il tempo minimo
-  return nowMs - last >= COOLDOWN_POI;
+  return nowMs - last >= ATTRAZIONI.cooldown_poi_ms;
 }
 
-/**
- * Ritorna la fascia ristoro corrente in base all'ora locale.
- *
- * Regole:
- * - colazione: 10:00 - 11:59
- * - pranzo:    12:00 - 14:59
- * - merenda:   15:00 - 17:59
- * - cena:      18:00 - 20:59
- *
- * @returns {"colazione"|"pranzo"|"merenda"|"cena"|null}
- */
-function fasciaRistoroCorrente() {
-  const ora = new Date().getHours();
-  if (ora >= FASCE_ORARIE.colazione.inizio && ora < FASCE_ORARIE.colazione.fine) return "colazione";
-  if (ora >= FASCE_ORARIE.pranzo.inizio && ora < FASCE_ORARIE.pranzo.fine) return "pranzo";
-  if (ora >= FASCE_ORARIE.merenda.inizio && ora < FASCE_ORARIE.merenda.fine) return "merenda";
-  if (ora >= FASCE_ORARIE.cena.inizio && ora < FASCE_ORARIE.cena.fine) return "cena";
-  return null;
-}
-
-/**
- * Reset giornaliero delle fasce notificate (ristori).
- * @param {number} nowMs
- */
-function ensureResetFasceRistoro(nowMs) {
+function todayYmd(nowMs) {
   const d = new Date(nowMs);
   const yyyy = String(d.getFullYear());
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
-  const today = `${yyyy}-${mm}-${dd}`;
-
-  if (stato.ristori.giorno === today) return;
-
-  stato.ristori.giorno = today;
-  stato.ristori.fasceNotificateOggi = {
-    colazione: false,
-    pranzo: false,
-    merenda: false,
-    cena: false,
-  };
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-/**
- * Valuta tutti i POI e può sparare:
- * - max 1 notifica attrazione (canale attrazioni)
- * - max 1 notifica ristoro (canale ristori, indipendente)
- *
- * Regole:
- * - Considera solo attrazioni e ristori (esclude WC).
- *
- * Canale attrazioni (invariato):
- * - cooldown globale 10min, cooldown per-POI 30min
- * - notifica solo se calcolaPunteggioAttrazione(...) > 8
- * - max 1 per chiamata, sceglie punteggio più alto
- *
- * Canale ristori (separato, nessun cooldown condiviso):
- * - notifica una sola volta per fascia al giorno (colazione/pranzo/merenda/cena)
- * - quando la fascia scatta, valuta i ristori disponibili per quella fascia
- * - sceglie il migliore per distanza + coda
- * - notifica una sola volta e marca la fascia come notificata
- *
- * @param {Array<Object>} pois
- * @param {{lat:number, lng:number}} posUtente
- * @param {(poi:Object)=>void} onNotificaAttrazione
- * @param {(poi:Object, fascia:"colazione"|"pranzo"|"merenda"|"cena")=>void} onNotificaRistoro
- * @returns {{attrazione:Object|null, ristoro:Object|null, fasciaRistoro:("colazione"|"pranzo"|"merenda"|"cena"|null)}}
- */
+function ensureResetGelatoGiornaliero(nowMs) {
+  const today = todayYmd(nowMs);
+  if (stato.ristori.gelato.giorno === today) return;
+  stato.ristori.gelato.giorno = today;
+  stato.ristori.gelato.notificato = false;
+}
+
+function ensureResetPostPranzoGiornaliero(nowMs) {
+  const today = todayYmd(nowMs);
+  if (stato.ristori.postPranzo.giorno === today) return;
+  stato.ristori.postPranzo.giorno = today;
+  stato.ristori.postPranzo.notificato = false;
+}
+
+function ensureResetUltimoGiroGiornaliero(nowMs) {
+  const today = todayYmd(nowMs);
+  if (stato.ristori.ultimoGiro.giorno === today) return;
+  stato.ristori.ultimoGiro.giorno = today;
+  stato.ristori.ultimoGiro.notificatoPerPoi = {};
+}
+
+function passaCooldownManuale(poiId, nowMs) {
+  const last = stato.ristori.ultimaNotificaManualePerPoi[poiId];
+  if (last == null) return true;
+  return nowMs - last >= RISTORI.cooldown_manuale_ms;
+}
+
 export function valutaTuttiIPoi(pois, posUtente, onNotificaAttrazione, onNotificaRistoro) {
   const nowMs = Date.now();
 
   // Guard: se la posizione utente non è disponibile, non facciamo nulla
-  if (!posUtente) {
-    return { attrazione: null, ristoro: null, fasciaRistoro: null };
-  }
+  if (!posUtente) return;
 
-  // Separiamo attrazioni e ristori, ignorando i WC (o qualsiasi categoria non rilevante)
-  const attrazioni = Array.isArray(pois)
-    ? pois.filter((p) => p && p.categoria === "attrazione")
-    : [];
-
-  const candidatiAttrazioni = attrazioni;
-
-  const candidatiRistori = Array.isArray(pois)
-    ? pois.filter(
-        (p) =>
-          p &&
-          p.categoria === "ristoro"
-      )
-    : [];
+  const list = Array.isArray(pois) ? pois : [];
+  const attrazioni = list.filter((p) => p && p.categoria === "attrazione");
+  const ristori = list.filter((p) => p && p.categoria === "ristoro");
 
   // -----------------------------
-  // CANALE ATTRAZIONI (invariato)
+  // CANALE ATTRAZIONI
   // -----------------------------
-  let attrazioneNotificata = null;
-
   // Cooldown globale: se non passa, non notifichiamo attrazioni (ma i ristori restano indipendenti)
   if (passaCooldownGlobale(nowMs)) {
     let miglioreAttrazione = null;
-    let migliorPunteggioAttrazione = -Infinity;
+    let migliorCoda = Infinity;
 
-    for (const poi of candidatiAttrazioni) {
+    for (const poi of attrazioni) {
       // Guard: salta silenziosamente POI senza id
       if (!poi || !poi.id) continue;
 
       // Cooldown per POI
       if (!passaCooldownPoi(poi.id, nowMs)) continue;
 
-      const score = calcolaPunteggioAttrazione(poi, attrazioni, posUtente);
-      if (score > ATTRAZIONI.soglia_notifica && score > migliorPunteggioAttrazione) {
+      if (!valutaNotificaAttrazione(poi)) continue;
+
+      const coda = Number(poi.coda_minuti);
+      if (!Number.isFinite(coda)) continue;
+      if (coda < migliorCoda) {
         miglioreAttrazione = poi;
-        migliorPunteggioAttrazione = score;
+        migliorCoda = coda;
       }
     }
 
@@ -172,55 +124,64 @@ export function valutaTuttiIPoi(pois, posUtente, onNotificaAttrazione, onNotific
       stato.attrazioni.ultimaNotificaPerPoi[miglioreAttrazione.id] = nowMs;
 
       if (typeof onNotificaAttrazione === "function") onNotificaAttrazione(miglioreAttrazione);
-      attrazioneNotificata = miglioreAttrazione;
     }
   }
 
   // --------------------------
-  // CANALE RISTORI (separato)
+  // CANALE RISTORI
   // --------------------------
-  ensureResetFasceRistoro(nowMs);
+  // SMART 1: post-pranzo (una volta per fascia al giorno)
+  ensureResetPostPranzoGiornaliero(nowMs);
+  if (stato.ristori.postPranzo.notificato === false) {
+    const poi = valutaTriggerPostPranzo(attrazioni, posUtente);
+    if (poi) {
+      stato.ristori.postPranzo.notificato = true;
+      if (typeof onNotificaAttrazione === "function") onNotificaAttrazione(poi, "post_pranzo");
+    }
+  }
 
-  const fascia = fasciaRistoroCorrente();
-  let ristoroNotificato = null;
+  // SMART 2: ultimo giro (una volta per attrazione per giornata)
+  ensureResetUltimoGiroGiornaliero(nowMs);
+  const bestUltimoGiro = valutaTriggerUltimoGiro(attrazioni, posUtente);
+  if (bestUltimoGiro && !stato.ristori.ultimoGiro.notificatoPerPoi[bestUltimoGiro.id]) {
+    stato.ristori.ultimoGiro.notificatoPerPoi[bestUltimoGiro.id] = true;
+    if (typeof onNotificaAttrazione === "function") onNotificaAttrazione(bestUltimoGiro, "ultimo_giro");
+  }
 
-  if (fascia && stato.ristori.fasceNotificateOggi[fascia] === false) {
-    // Filtra i ristori che dichiarano di essere disponibili in questa fascia.
-    // Nota: per colazione, se il dataset non contiene "colazione", semplicemente non notificherà.
-    const ristoriInFascia = candidatiRistori.filter(
-      (p) =>
-        p &&
-        p.id &&
-        Array.isArray(p.fascia_oraria) &&
-        p.fascia_oraria.includes(fascia)
+  // Caso 1: trigger caffe (una volta sola)
+  if (stato.ristori.caffeNotificato === false && valutaTriggerCaffe(attrazioni) === true) {
+    const caffe = ristori.find(
+      (p) => p && p.id && Array.isArray(p.trigger) && p.trigger.includes("caffe"),
     );
-
-    // Scegliamo il ristoro col punteggio più alto.
-    // Non "bruciamo" la fascia finché nessun ristoro supera > 7:
-    // riproveremo al ciclo successivo finché la fascia non scade.
-    let miglioreRistoro = null;
-    let migliorScore = -Infinity;
-
-    for (const poi of ristoriInFascia) {
-      const score = calcolaPunteggioRistoro(poi, posUtente);
-      if (score > RISTORI.soglia_notifica && score > migliorScore) {
-        migliorScore = score;
-        miglioreRistoro = poi;
-      }
-    }
-
-    if (miglioreRistoro) {
-      stato.ristori.fasceNotificateOggi[fascia] = true;
-
-      if (typeof onNotificaRistoro === "function") onNotificaRistoro(miglioreRistoro, fascia);
-      ristoroNotificato = miglioreRistoro;
+    if (caffe) {
+      stato.ristori.caffeNotificato = true;
+      if (typeof onNotificaRistoro === "function") onNotificaRistoro(caffe);
     }
   }
 
-  return {
-    attrazione: attrazioneNotificata,
-    ristoro: ristoroNotificato,
-    fasciaRistoro: fascia,
-  };
+  // Caso 2: trigger gelato (una volta al giorno)
+  ensureResetGelatoGiornaliero(nowMs);
+  if (stato.ristori.gelato.notificato === false) {
+    for (const poi of ristori) {
+      if (!poi || !poi.id) continue;
+      if (!(Array.isArray(poi.trigger) && poi.trigger.includes("gelato"))) continue;
+      if (valutaTriggerGelato(poi, posUtente) !== true) continue;
+      stato.ristori.gelato.notificato = true;
+      if (typeof onNotificaRistoro === "function") onNotificaRistoro(poi);
+      break;
+    }
+  }
+
+  // Caso 3: trigger pranzo/cena manuale, solo se notifica_attiva e cooldown 1h per POI
+  for (const poi of ristori) {
+    if (!poi || !poi.id) continue;
+    const isPranzo = Array.isArray(poi.trigger) && poi.trigger.includes("pranzo");
+    const isCena = Array.isArray(poi.trigger) && poi.trigger.includes("cena");
+    if (!isPranzo && !isCena) continue;
+    if (poi.notifica_attiva !== true) continue;
+    if (!passaCooldownManuale(poi.id, nowMs)) continue;
+    stato.ristori.ultimaNotificaManualePerPoi[poi.id] = nowMs;
+    if (typeof onNotificaRistoro === "function") onNotificaRistoro(poi);
+  }
 }
 

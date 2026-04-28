@@ -1,31 +1,18 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Bell, MapPin, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export type Posizione = { lat: number; lng: number };
-
-export type Poi = {
-  id: string;
-  nome: string;
-  categoria: "attrazione" | "ristoro" | "wc";
-  posizione: Posizione;
-  coda_minuti?: number;
-  altezza_minima?: number | null;
-  adrenalina?: string;
-  alimenti?: string[];
-  trigger?: string;
-  notifica_attiva?: boolean;
-};
+import type { Poi, Categoria } from "@/types/poi";
 
 type Props = {
   pois: Poi[];
-  posUtente: Posizione;
+  posUtente: Poi["posizione"];
   bellById: Record<string, boolean>;
   onToggleBell: (id: string) => void;
-  calcolaDistanzaM: (poiPos: Posizione) => number;
+  calcolaDistanzaM: (poiPos: Poi["posizione"]) => number;
+  fullBleed?: boolean;
 };
 
-type Tab = "attrazione" | "ristoro" | "wc";
+type Tab = Categoria;
 
 /** Screenshot: nero pieno */
 const BG = "#000000";
@@ -52,8 +39,18 @@ function codaBadgeClass(minuti: number) {
   return "bg-rose-950/85 text-rose-200 ring-1 ring-rose-700/35";
 }
 
-export function POIList({ pois, posUtente: _posUtente, bellById, onToggleBell, calcolaDistanzaM }: Props) {
+export function POIList({
+  pois,
+  posUtente: _posUtente,
+  bellById,
+  onToggleBell,
+  calcolaDistanzaM,
+  fullBleed = true,
+}: Props) {
   const [tab, setTab] = useState<Tab>("attrazione");
+  const swipeRef = useRef<{ x: number; y: number; pointerType: string } | null>(null);
+  const firstLiRef = useRef<HTMLLIElement | null>(null);
+  const [panelMaxH, setPanelMaxH] = useState<number | null>(null);
 
   const filtered = useMemo(() => pois.filter((p) => p && p.categoria === tab), [pois, tab]);
 
@@ -78,13 +75,61 @@ export function POIList({ pois, posUtente: _posUtente, bellById, onToggleBell, c
   const tabs: { id: Tab; label: string }[] = [
     { id: "attrazione", label: "Attrazioni" },
     { id: "ristoro", label: "Ristoranti" },
-    { id: "wc", label: "WC" },
+    { id: "servizi", label: "Servizi" },
   ];
+
+  useLayoutEffect(() => {
+    if (fullBleed) return;
+    const el = firstLiRef.current;
+    if (!el) return;
+
+    const compute = () => {
+      const rect = el.getBoundingClientRect();
+      if (!rect.height || rect.height < 1) return;
+      // 6 elementi + gap tra le card (mt-5 ≈ 20px) + padding lista/tab
+      const approx = Math.round(rect.height * 6 + 20 * 5 + 24);
+      setPanelMaxH(approx);
+    };
+
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fullBleed, tab, sorted.length]);
+
+  function handleSwipeEnd(clientX: number, clientY: number) {
+    const start = swipeRef.current;
+    swipeRef.current = null;
+    if (!start) return;
+    // Swipe tabs: solo touch/pen, non mouse (evita trigger mentre clicchi).
+    if (start.pointerType === "mouse") return;
+    const dx = clientX - start.x;
+    const dy = clientY - start.y;
+    // Richiedi intenzione orizzontale chiara
+    if (Math.abs(dx) < 70) return;
+    if (Math.abs(dy) > 40) return;
+    if (Math.abs(dx) < Math.abs(dy) * 1.4) return;
+
+    const idx = tabs.findIndex((t) => t.id === tab);
+    if (idx < 0) return;
+    const nextIdx = dx < 0 ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+    setTab(tabs[nextIdx]!.id);
+  }
 
   return (
     <div
-      className="-mx-4 w-[calc(100%+2rem)] max-w-none pb-28 antialiased"
+      className={cn(fullBleed ? "-mx-4 w-[calc(100%+2rem)] max-w-none" : "w-full", "pb-28 antialiased")}
       style={{ backgroundColor: BG, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif" }}
+      onPointerDown={(e) => {
+        const target = e.target as HTMLElement | null;
+        // Non iniziare swipe se stai interagendo con un bottone (tab, campanella, ecc.)
+        if (target?.closest("button")) return;
+        swipeRef.current = { x: e.clientX, y: e.clientY, pointerType: e.pointerType };
+      }}
+      onPointerUp={(e) => handleSwipeEnd(e.clientX, e.clientY)}
+      onPointerCancel={() => {
+        swipeRef.current = null;
+      }}
     >
       {/* Tab: tre colonne equamente spaziate; attiva = capsula grigia + padding generoso */}
       <nav
@@ -116,16 +161,35 @@ export function POIList({ pois, posUtente: _posUtente, bellById, onToggleBell, c
       <div className="h-4" aria-hidden />
 
       {/* Lista */}
-      <ul className="flex w-full flex-col overflow-visible pt-4" style={{ backgroundColor: BG }}>
+      <ul
+        className={cn(
+          "flex w-full flex-col pt-4",
+          fullBleed
+            ? "overflow-visible"
+            : "overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        )}
+        style={{
+          backgroundColor: BG,
+          maxHeight: !fullBleed && panelMaxH ? `${panelMaxH}px` : undefined,
+          // Fade bottom: suggerisce scroll con rotella
+          WebkitMaskImage: !fullBleed
+            ? "linear-gradient(to bottom, rgba(0,0,0,1) 84%, rgba(0,0,0,0))"
+            : undefined,
+          maskImage: !fullBleed
+            ? "linear-gradient(to bottom, rgba(0,0,0,1) 84%, rgba(0,0,0,0))"
+            : undefined,
+        }}
+      >
         {sorted.map(({ p, m }, idx) => {
           const coda = Number(p.coda_minuti);
           const hasCoda = Number.isFinite(coda);
           const bellOn = bellById[p.id] === true;
-          const showCoda = hasCoda && tab !== "wc";
+          const showCoda = hasCoda && tab !== "servizi";
 
           return (
             <li
               key={p.id}
+              ref={idx === 0 ? firstLiRef : undefined}
               className={cn("w-full overflow-visible", idx > 0 && "mt-5")}
               style={{ backgroundColor: BG }}
             >
@@ -181,12 +245,11 @@ export function POIList({ pois, posUtente: _posUtente, bellById, onToggleBell, c
                   className={cn(
                     "absolute z-30 flex size-9 items-center justify-center rounded-full text-white transition-all duration-200",
                     "backdrop-blur-xl backdrop-saturate-150",
-                    "ring-1 ring-white/10",
-                    "bg-gradient-to-br from-white/[0.22] via-white/[0.10] to-white/[0.04]",
                     "shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_2px_8px_rgba(0,0,0,0.22)]",
-                    "hover:from-white/[0.26] hover:via-white/[0.12] hover:to-white/[0.06]",
-                    bellOn &&
-                      "from-white/[0.14] via-white/[0.10] to-white/[0.05] ring-white/20 hover:from-white/[0.2] hover:via-white/[0.12]",
+                    // ON = look glass attuale (più evidente)
+                    bellOn
+                      ? "ring-1 ring-white/10 bg-gradient-to-br from-white/[0.22] via-white/[0.10] to-white/[0.04] hover:from-white/[0.26] hover:via-white/[0.12] hover:to-white/[0.06]"
+                      : "ring-1 ring-white/5 bg-gradient-to-br from-white/[0.10] via-white/[0.05] to-white/[0.02] opacity-55 hover:opacity-75",
                   )}
                   style={{
                     right: "0.2rem",
@@ -196,7 +259,7 @@ export function POIList({ pois, posUtente: _posUtente, bellById, onToggleBell, c
                   aria-pressed={bellOn}
                   aria-label={bellOn ? "Disattiva notifiche" : "Attiva notifiche"}
                 >
-                  <Bell className="size-[15px] drop-shadow-sm" strokeWidth={2.25} />
+                  <Bell className={cn("size-[15px] drop-shadow-sm", !bellOn && "opacity-60")} strokeWidth={2.25} />
                 </button>
                 </div>
               </div>
