@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { POIList } from "@/components/POIList";
 import { Onboarding, type ProfiloUtente } from "@/components/Onboarding";
 import { NotificationPopup } from "@/components/NotificationPopup";
+import { MiniMapOverlay } from "@/components/MiniMapOverlay";
 import { calcolaDistanza, valutaTriggerAsciugatura } from "@/core/algorithm.js";
 import { valutaTuttiIPoi } from "@/core/notifications.js";
 import type { Poi } from "@/types/poi";
@@ -20,6 +21,8 @@ function App() {
   const [debugPopup, setDebugPopup] = useState<null | "attrazione" | "caffe">(null);
   const [debugPanelOpen, setDebugPanelOpen] = useState(false);
   const [poiPanelOpen, setPoiPanelOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [mapDest, setMapDest] = useState<Poi | null>(null);
 
   const posFallback: Poi["posizione"] = useMemo(
     () => ({ lat: 45.4631, lng: 9.1894 }),
@@ -336,6 +339,11 @@ function App() {
                   setBellById((prev) => ({ ...prev, [id]: !(prev[id] === true) }));
                   setPois((prev) => prev.map((p) => (p?.id === id ? { ...p, notifica_attiva: !(p.notifica_attiva === true) } : p)));
                 }}
+                onNaviga={(poi) => {
+                  setPoiPanelOpen(false);
+                  setMapDest(poi);
+                  setMapOpen(true);
+                }}
                 calcolaDistanzaM={(poiPos) => calcolaDistanza(posUtente ?? posFallback, poiPos)}
               />
             </div>
@@ -367,10 +375,19 @@ function App() {
         sottotitolo={sottotitoloNotifica}
         onChiudi={() => setNotificaAttiva(null)}
         onNaviga={(poi) => {
-          if (poi.posizione) {
-            window.open(`https://maps.google.com/?q=${poi.posizione.lat},${poi.posizione.lng}`, "_blank");
-          }
           setNotificaAttiva(null);
+          setMapDest(poi);
+          setMapOpen(true);
+        }}
+      />
+
+      <MiniMapOverlay
+        open={mapOpen}
+        posUtente={posUtente ?? posFallback}
+        destinazione={mapDest}
+        onClose={() => {
+          setMapOpen(false);
+          setMapDest(null);
         }}
       />
 

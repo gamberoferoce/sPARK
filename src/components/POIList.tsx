@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { Bell, MapPin, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Poi, Categoria } from "@/types/poi";
@@ -8,6 +9,7 @@ type Props = {
   posUtente: Poi["posizione"];
   bellById: Record<string, boolean>;
   onToggleBell: (id: string) => void;
+  onNaviga: (poi: Poi) => void;
   calcolaDistanzaM: (poiPos: Poi["posizione"]) => number;
   fullBleed?: boolean;
 };
@@ -44,6 +46,7 @@ export function POIList({
   posUtente: _posUtente,
   bellById,
   onToggleBell,
+  onNaviga,
   calcolaDistanzaM,
   fullBleed = true,
 }: Props) {
@@ -195,11 +198,22 @@ export function POIList({
             >
               {/* Card pill: padding generoso; campanella metà sopra il bordo superiore */}
               <div className="px-4">
-                <div
+                <motion.div
                   className="relative w-full overflow-visible rounded-full py-2.5 pl-3.5 pr-10"
                   style={{
                     backgroundColor: CARD_BG,
                     border: `1px solid ${LINE}`,
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  whileHover={{ x: -6 }}
+                  transition={{ type: "spring", stiffness: 520, damping: 42 }}
+                  onClick={() => onNaviga(p)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onNaviga(p);
+                    }
                   }}
                 >
                 <div className="flex min-w-0 items-center gap-2">
@@ -241,7 +255,10 @@ export function POIList({
 
                 <button
                   type="button"
-                  onClick={() => onToggleBell(p.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleBell(p.id);
+                  }}
                   className={cn(
                     "absolute z-30 flex size-9 items-center justify-center rounded-full text-white transition-all duration-200",
                     "backdrop-blur-xl backdrop-saturate-150",
@@ -261,7 +278,7 @@ export function POIList({
                 >
                   <Bell className={cn("size-[15px] drop-shadow-sm", !bellOn && "opacity-60")} strokeWidth={2.25} />
                 </button>
-                </div>
+                </motion.div>
               </div>
 
               {/* aria: spazio dopo ultima card */}
