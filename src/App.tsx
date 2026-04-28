@@ -307,7 +307,7 @@ function App() {
       <AnimatePresence initial={false}>
         {poiPanelOpen ? (
           <motion.div
-            className="fixed right-0 top-0 z-40"
+            className="fixed right-0 top-0 z-40 overflow-visible"
             style={{ width: "50vw" }}
             initial={{ y: -16, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

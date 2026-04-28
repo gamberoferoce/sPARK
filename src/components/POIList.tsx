@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Bell, MapPin, Sparkles } from "lucide-react";
+import { ArrowUpRight, Bell, MapPin, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Poi, Categoria } from "@/types/poi";
 
@@ -134,56 +134,56 @@ export function POIList({
         swipeRef.current = null;
       }}
     >
-      {/* Tab: tre colonne equamente spaziate; attiva = capsula grigia + padding generoso */}
-      <nav
-        className="grid w-full grid-cols-3 items-center justify-items-stretch px-4 pt-0.5"
-        aria-label="Filtri categoria"
-      >
-        {tabs.map((t) => {
-          const on = tab === t.id;
-          return (
-            <div key={t.id} className="flex justify-center px-0.5">
-              <button
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={cn(
-                  "min-h-[36px] w-full max-w-[132px] whitespace-nowrap text-center text-[14px] leading-tight transition-colors duration-150",
-                  on
-                    ? "rounded-full px-4 py-2 font-normal text-white bg-zinc-600/50 shadow-inner shadow-black/20 ring-1 ring-white/10 hover:bg-zinc-500/50"
-                    : "rounded-full bg-transparent px-2 py-2 font-normal text-white hover:bg-white/[0.08] hover:text-zinc-100",
-                )}
-              >
-                {t.label}
-              </button>
-            </div>
-          );
-        })}
-      </nav>
+      {/* Buffer invisibile per lo slide a sinistra (senza cambiare layout percepito) */}
+      <div className={cn(!fullBleed && "pl-[96px]")}>
+        <div className={cn(!fullBleed && "-translate-x-[96px] transform-gpu")}>
+          {/* Tab: tre colonne equamente spaziate; attiva = capsula grigia + padding generoso */}
+          <nav
+            className="grid w-full grid-cols-3 items-center justify-items-stretch px-4 pt-0.5"
+            aria-label="Filtri categoria"
+          >
+            {tabs.map((t) => {
+              const on = tab === t.id;
+              return (
+                <div key={t.id} className="flex justify-center px-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setTab(t.id)}
+                    className={cn(
+                      "min-h-[36px] w-full max-w-[132px] whitespace-nowrap text-center text-[14px] leading-tight transition-colors duration-150",
+                      on
+                        ? "rounded-full px-4 py-2 font-normal text-white bg-zinc-600/50 shadow-inner shadow-black/20 ring-1 ring-white/10 hover:bg-zinc-500/50"
+                        : "rounded-full bg-transparent px-2 py-2 font-normal text-white hover:bg-white/[0.08] hover:text-zinc-100",
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                </div>
+              );
+            })}
+          </nav>
 
-      {/* Spazio sotto tab prima della lista */}
-      <div className="h-4" aria-hidden />
+          {/* Spazio sotto tab prima della lista */}
+          <div className="h-4" aria-hidden />
 
-      {/* Lista */}
-      <ul
-        className={cn(
-          "flex w-full flex-col pt-4",
-          fullBleed
-            ? "overflow-visible"
-            : "overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-        )}
-        style={{
-          backgroundColor: BG,
-          maxHeight: !fullBleed && panelMaxH ? `${panelMaxH}px` : undefined,
-          // Fade bottom: suggerisce scroll con rotella
-          WebkitMaskImage: !fullBleed
-            ? "linear-gradient(to bottom, rgba(0,0,0,1) 84%, rgba(0,0,0,0))"
-            : undefined,
-          maskImage: !fullBleed
-            ? "linear-gradient(to bottom, rgba(0,0,0,1) 84%, rgba(0,0,0,0))"
-            : undefined,
-        }}
-      >
-        {sorted.map(({ p, m }, idx) => {
+          {/* Lista (scroll verticale) */}
+          <div
+            className={cn(
+              "relative",
+              fullBleed
+                ? "overflow-visible"
+                : "overflow-x-hidden overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+              // Padding interno: crea spazio reale a sinistra per lo slide (senza cambiare l'allineamento visivo)
+              !fullBleed && "pl-[96px]",
+            )}
+            style={{
+              backgroundColor: BG,
+              maxHeight: !fullBleed && panelMaxH ? `${panelMaxH}px` : undefined,
+            }}
+          >
+            <div className={cn(!fullBleed && "-translate-x-[96px] transform-gpu")}>
+              <ul className={cn("flex w-full flex-col pt-4 px-4", !fullBleed && "items-end")}>
+          {sorted.map(({ p, m }, idx) => {
           const coda = Number(p.coda_minuti);
           const hasCoda = Number.isFinite(coda);
           const bellOn = bellById[p.id] === true;
@@ -197,26 +197,27 @@ export function POIList({
               style={{ backgroundColor: BG }}
             >
               {/* Card pill: padding generoso; campanella metà sopra il bordo superiore */}
-              <div className="px-4">
-                <motion.div
-                  className="relative w-full overflow-visible rounded-full py-2.5 pl-3.5 pr-10"
-                  style={{
-                    backgroundColor: CARD_BG,
-                    border: `1px solid ${LINE}`,
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  whileHover={{ x: -6 }}
-                  transition={{ type: "spring", stiffness: 520, damping: 42 }}
-                  onClick={() => onNaviga(p)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onNaviga(p);
-                    }
-                  }}
-                >
-                <div className="flex min-w-0 items-center gap-2">
+              <motion.div
+                className={cn(
+                  "group relative overflow-visible",
+                  fullBleed ? "w-full" : "ml-auto w-[360px] max-w-full",
+                )}
+                initial="rest"
+                whileHover="hover"
+              >
+                  <motion.div
+                    className="relative w-full overflow-visible rounded-full py-2.5 pl-3.5 pr-10"
+                    style={{
+                      backgroundColor: CARD_BG,
+                      border: `1px solid ${LINE}`,
+                    }}
+                    variants={{
+                      rest: { x: 0 },
+                      hover: { x: -96 },
+                    }}
+                    transition={{ type: "spring", stiffness: 520, damping: 42 }}
+                  >
+                  <div className="flex min-w-0 items-center gap-2">
                   <span
                     className="inline-flex size-10 shrink-0 items-center justify-center rounded-full"
                     style={{ backgroundColor: CIRCLE_BG }}
@@ -253,40 +254,88 @@ export function POIList({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleBell(p.id);
-                  }}
-                  className={cn(
-                    "absolute z-30 flex size-9 items-center justify-center rounded-full text-white transition-all duration-200",
-                    "backdrop-blur-xl backdrop-saturate-150",
-                    "shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_2px_8px_rgba(0,0,0,0.22)]",
-                    // ON = look glass attuale (più evidente)
-                    bellOn
-                      ? "ring-1 ring-white/10 bg-gradient-to-br from-white/[0.22] via-white/[0.10] to-white/[0.04] hover:from-white/[0.26] hover:via-white/[0.12] hover:to-white/[0.06]"
-                      : "ring-1 ring-white/5 bg-gradient-to-br from-white/[0.10] via-white/[0.05] to-white/[0.02] opacity-55 hover:opacity-75",
-                  )}
-                  style={{
-                    right: "0.2rem",
-                    top: 8,
-                    transform: "translateY(-50%)",
-                  }}
-                  aria-pressed={bellOn}
-                  aria-label={bellOn ? "Disattiva notifiche" : "Attiva notifiche"}
-                >
-                  <Bell className={cn("size-[15px] drop-shadow-sm", !bellOn && "opacity-60")} strokeWidth={2.25} />
-                </button>
+                  {/* Campanella sulla card: visibile solo se attiva (e sparisce in hover) */}
+                  {bellOn ? (
+                    <div
+                      className={cn(
+                        "absolute right-[0.2rem] top-[8px] z-30 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-white transition-opacity duration-150",
+                        "backdrop-blur-xl backdrop-saturate-150",
+                        "shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_2px_8px_rgba(0,0,0,0.22)]",
+                        "ring-1 ring-white/10 bg-gradient-to-br from-white/[0.22] via-white/[0.10] to-white/[0.04]",
+                      )}
+                      style={{ opacity: 1 }}
+                    >
+                      <Bell className="size-[15px] drop-shadow-sm" strokeWidth={2.25} />
+                    </div>
+                  ) : null}
+                  </motion.div>
+
+                  {/* Azioni su hover: fuori dalla card, a destra */}
+                  <div
+                    className={cn(
+                      "absolute inset-y-0 right-0 z-40 flex items-center gap-2",
+                      "opacity-0 translate-x-3 pointer-events-none",
+                      "transition-all duration-150",
+                      "group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto",
+                    )}
+                  >
+                    <button
+                      type="button"
+                      aria-pressed={bellOn}
+                      aria-label={bellOn ? "Disattiva notifiche" : "Attiva notifiche"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleBell(p.id);
+                      }}
+                      className={cn(
+                        "flex size-10 items-center justify-center rounded-full text-white transition-all duration-150",
+                        "hover:bg-white/[0.06]",
+                        !bellOn && "opacity-65 hover:opacity-100",
+                      )}
+                      style={{ backgroundColor: CIRCLE_BG, border: `1px solid ${LINE}` }}
+                    >
+                      <Bell className={cn("size-[15px] drop-shadow-sm", !bellOn && "opacity-70")} strokeWidth={2.25} />
+                    </button>
+
+                    <button
+                      type="button"
+                      aria-label="Naviga"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onNaviga(p);
+                      }}
+                      className={cn(
+                        "flex size-10 items-center justify-center rounded-full text-white transition-colors duration-150",
+                        "hover:bg-white/[0.06]",
+                      )}
+                      style={{ backgroundColor: CIRCLE_BG, border: `1px solid ${LINE}` }}
+                    >
+                      <ArrowUpRight className="size-[16px] drop-shadow-sm" strokeWidth={2.25} />
+                    </button>
+                  </div>
                 </motion.div>
-              </div>
 
               {/* aria: spazio dopo ultima card */}
               {idx === sorted.length - 1 ? <div className="h-1" /> : null}
             </li>
           );
-        })}
-      </ul>
+          })}
+              </ul>
+            </div>
+
+        {/* Fade bottom: suggerisce scroll con rotella (senza mask, così non clippa lo slide laterale) */}
+        {!fullBleed ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-12"
+            style={{
+              background: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)",
+            }}
+          />
+        ) : null}
+      </div>
+        </div>
+      </div>
 
       {sorted.length === 0 ? (
         <p className="px-8 py-10 text-center text-sm text-zinc-500">Nessun elemento in questa categoria.</p>
