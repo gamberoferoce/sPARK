@@ -93,7 +93,7 @@ function LauncherButton({
         <button
           type="button"
         aria-label={kind === "badge" ? "Open badges" : "Open cards"}
-          className="relative z-[1] grid h-10 w-10 place-items-center rounded-full bg-zinc-950/80 text-zinc-100 ring-1 ring-white/10 backdrop-blur select-none"
+          className="relative z-[1] grid h-10 w-10 place-items-center rounded-full bg-zinc-950/80 text-zinc-100 ring-1 ring-white backdrop-blur select-none transition-transform duration-150 hover:scale-[1.03] hover:ring-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           style={{ touchAction: "none" }}
           onPointerDown={(e) => {
             e.preventDefault();
@@ -153,6 +153,7 @@ function LauncherButton({
 
 function App() {
   const [pois, setPois] = useState<Poi[]>([]);
+  const poisRef = useRef<Poi[]>([]);
   const [profilo, setProfilo] = useState<ProfiloUtente | null>(null);
   const [bellById, setBellById] = useState<Record<string, boolean>>({});
   const [notificaAttiva, setNotificaAttiva] = useState<{
@@ -190,6 +191,13 @@ function App() {
     [],
   );
   const [posUtente, setPosUtente] = useState<Poi["posizione"] | null>(null);
+
+  const [queueTimesParkId, setQueueTimesParkId] = useState<number | null>(null);
+  const lastQueueTimesSuccessRef = useRef<number>(0);
+
+  useEffect(() => {
+    poisRef.current = pois;
+  }, [pois]);
 
   const attrazioniConBadge = useMemo(
     () => pois.filter((p) => p?.categoria === "attrazione" && !!p.badge),
@@ -268,6 +276,146 @@ function App() {
     };
   }, []);
 
+  // Queue-Times.com integration (Mirabilandia live wait times)
+  useEffect(() => {
+    if (!pois || pois.length === 0) return;
+    if (queueTimesParkId != null) return;
+
+    let cancelled = false;
+    const ctrl = new AbortController();
+
+    const normalizeName = (s: string) =>
+      s
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, " ");
+
+    const run = async () => {
+      try {
+        const base = import.meta.env.DEV ? "/queue-times" : "/api/queue-times";
+        const res = await fetch(`${base}/parks.json`, { signal: ctrl.signal });
+        if (!res.ok) return;
+        const json = (await res.json()) as unknown;
+        if (cancelled) return;
+
+        // parks.json structure is an array of groups (companies) with parks
+        // We search by park name inside nested arrays.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const groups = Array.isArray(json) ? (json as any[]) : [];
+        let foundId: number | null = null;
+        for (const g of groups) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const parks = Array.isArray((g as any)?.parks) ? ((g as any).parks as any[]) : [];
+          for (const p of parks) {
+            const name = typeof p?.name === "string" ? (p.name as string) : "";
+            const id = typeof p?.id === "number" ? (p.id as number) : null;
+            if (!name || id == null) continue;
+            if (normalizeName(name) === normalizeName("Mirabilandia")) {
+              foundId = id;
+              break;
+            }
+          }
+          if (foundId != null) break;
+        }
+
+        if (foundId != null) {
+          console.log("[QUEUE-TIMES PARK ID]:", foundId);
+          setQueueTimesParkId(foundId);
+        }
+      } catch {
+        // ignore (network/CORS/etc.)
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+      ctrl.abort();
+    };
+  }, [pois, queueTimesParkId]);
+
+  useEffect(() => {
+    if (queueTimesParkId == null) return;
+
+    const normalizeName = (s: string) =>
+      s
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, " ");
+
+    const tick = async () => {
+      try {
+        const base = import.meta.env.DEV ? "/queue-times" : "/api/queue-times";
+        const res = await fetch(`${base}/parks/${queueTimesParkId}/queue_times.json`);
+        if (!res.ok) return;
+        const data = (await res.json()) as unknown;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lands = Array.isArray((data as any)?.lands) ? ((data as any).lands as any[]) : [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rides: any[] = [];
+        for (const l of lands) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const rs = Array.isArray((l as any)?.rides) ? ((l as any).rides as any[]) : [];
+          rides.push(...rs);
+        }
+        if (rides.length === 0) return;
+
+        // If everything is closed, treat park as closed and keep previous values.
+        const allClosed = rides.every((r) => r && r.is_open === false);
+        if (allClosed) return;
+
+        const currentPois = poisRef.current;
+        // Build name -> index map from current POIs for fast matching
+        const poiByNameKey = new Map<string, string>();
+        for (const p of currentPois) {
+          if (!p?.id || typeof p.nome !== "string") continue;
+          poiByNameKey.set(normalizeName(p.nome), p.id);
+        }
+
+        const updates = new Map<string, number>();
+        const noMatches: string[] = [];
+
+        for (const r of rides) {
+          const name = typeof r?.name === "string" ? (r.name as string) : "";
+          const wait = typeof r?.wait_time === "number" ? (r.wait_time as number) : null;
+          const open = r?.is_open === true;
+          if (!name) continue;
+          const key = normalizeName(name);
+          const poiId = poiByNameKey.get(key);
+          if (!poiId) {
+            noMatches.push(name);
+            continue;
+          }
+          if (!open) continue;
+          if (wait == null || !Number.isFinite(wait)) continue;
+          updates.set(poiId, Math.max(0, Math.round(wait)));
+        }
+
+        if (noMatches.length) {
+          for (const n of noMatches) console.log("[QUEUE-TIMES NO MATCH]:", n);
+        }
+
+        if (updates.size === 0) return;
+
+        lastQueueTimesSuccessRef.current = Date.now();
+        setPois((prev) =>
+          prev.map((p) => {
+            const nextWait = updates.get(p.id);
+            if (nextWait == null) return p;
+            return { ...p, coda_minuti: nextWait };
+          }),
+        );
+      } catch {
+        // keep previous values
+      }
+    };
+
+    tick();
+    const id = window.setInterval(tick, 5 * 60 * 1000);
+    return () => window.clearInterval(id);
+  }, [queueTimesParkId]);
+
   // Ottiene e aggiorna posUtente via geolocalizzazione
   useEffect(() => {
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) return;
@@ -328,10 +476,14 @@ function App() {
     }
 
     const id = window.setInterval(() => {
+      // If Queue-Times updates are active, avoid clobbering ride wait times.
+      const hasRecentLive = Date.now() - lastQueueTimesSuccessRef.current < 10 * 60 * 1000;
       setPois((prev) =>
         prev.map((p) => {
           if (!p || !p.id) return p;
-          if (p.categoria === "attrazione") return { ...p, coda_minuti: randomInt(5, 80) };
+          if (p.categoria === "attrazione") {
+            return hasRecentLive ? p : { ...p, coda_minuti: randomInt(5, 80) };
+          }
           if (p.categoria === "ristoro") return { ...p, coda_minuti: randomInt(0, 25) };
           return p; // wc invariati
         }),

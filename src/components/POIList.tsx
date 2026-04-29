@@ -284,11 +284,10 @@ export function POIList({
                         onToggleBell(p.id);
                       }}
                       className={cn(
-                        "flex size-10 items-center justify-center rounded-full text-white transition-all duration-150",
-                        "hover:bg-white/[0.06]",
-                        !bellOn && "opacity-65 hover:opacity-100",
+                        "flex size-10 items-center justify-center rounded-full bg-transparent text-white transition-colors duration-150",
+                        "hover:bg-[#18181b]",
                       )}
-                      style={{ backgroundColor: CIRCLE_BG, border: `1px solid ${LINE}` }}
+                      style={{ border: "1px solid #ffffff" }}
                     >
                       <Bell className={cn("size-[15px] drop-shadow-sm", !bellOn && "opacity-70")} strokeWidth={2.25} />
                     </button>
@@ -301,10 +300,10 @@ export function POIList({
                         onNaviga(p);
                       }}
                       className={cn(
-                        "flex size-10 items-center justify-center rounded-full text-white transition-colors duration-150",
-                        "hover:bg-white/[0.06]",
+                        "flex size-10 items-center justify-center rounded-full bg-transparent text-white transition-colors duration-150",
+                        "hover:bg-[#18181b]",
                       )}
-                      style={{ backgroundColor: CIRCLE_BG, border: `1px solid ${LINE}` }}
+                      style={{ border: "1px solid #ffffff" }}
                     >
                       <ArrowUpRight className="size-[16px] drop-shadow-sm" strokeWidth={2.25} />
                     </button>
