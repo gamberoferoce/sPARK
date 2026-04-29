@@ -17,8 +17,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const response = await fetch(url, {
       headers: {
-        Accept: "application/json",
-        "User-Agent": "spark-park-vercel-proxy",
+        // Queue-Times may block datacenter UAs; use a browser-like header set.
+        Accept: "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       },
     });
 
