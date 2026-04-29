@@ -1,11 +1,155 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LayoutGrid, Sparkles } from "lucide-react";
 import { POIList } from "@/components/POIList";
 import { Onboarding, type ProfiloUtente } from "@/components/Onboarding";
 import { NotificationPopup } from "@/components/NotificationPopup";
 import { MiniMapOverlay } from "@/components/MiniMapOverlay";
+import { BadgeScreen } from "@/components/BadgeScreen";
 import { calcolaDistanza, valutaTriggerAsciugatura } from "@/core/algorithm.js";
 import { valutaTuttiIPoi } from "@/core/notifications.js";
 import type { Poi } from "@/types/poi";
+
+function LauncherButton({
+  kind,
+  onChangeKind,
+  onRelease,
+}: {
+  kind: "cards" | "badge";
+  onChangeKind: (k: "cards" | "badge") => void;
+  onRelease: (opts: { kind: "cards" | "badge"; wasDrag: boolean }) => void;
+}) {
+  const draggingRef = useRef(false);
+  const startXRef = useRef<number | null>(null);
+  const lastSetRef = useRef<"cards" | "badge" | null>(null);
+  const [pressed, setPressed] = useState(false);
+  const [dx, setDx] = useState(0);
+  const [dragging, setDragging] = useState(false);
+
+  return (
+    <div className="fixed top-2 left-1/2 z-[86] -translate-x-1/2">
+      <div className="relative h-10 w-10" aria-hidden={false}>
+        {/* Visual cue: due simboli sfusi che "scorrono" verso l'icona */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            opacity: pressed ? 1 : 0,
+            transition: "opacity 120ms ease",
+          }}
+        >
+          {(() => {
+            const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+            // movimento continuo: l'icona "sfusa" segue dx in modo proporzionale (clampato)
+            const travelMax = 52; // max distance toward center
+            const p = Math.min(1, Math.abs(dx) / travelMax);
+
+            // Visual cue coerente:
+            // - if Cards is selected, show Badges on the left (drag right to bring to center)
+            // - if Badges is selected, show Cards on the right (drag left to bring to center)
+            const showOtherOnLeft = kind === "cards";
+            const incoming = showOtherOnLeft ? clamp(dx, 0, travelMax) : clamp(dx, -travelMax, 0);
+            const opacity = 0.25 + 0.65 * p;
+            const scale = 0.92 + 0.06 * p;
+            const transition = dragging ? "none" : "transform 140ms ease, opacity 140ms ease";
+            return (
+              <>
+                {showOtherOnLeft ? (
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 rounded-full bg-zinc-950/70 text-zinc-100 ring-1 ring-white/10 backdrop-blur"
+                    style={{
+                      left: "-52px",
+                      width: 36,
+                      height: 36,
+                      display: "grid",
+                      placeItems: "center",
+                      transform: `translate(${incoming}px, -50%) scale(${scale})`,
+                      opacity,
+                      transition,
+                    }}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                ) : (
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 rounded-full bg-zinc-950/70 text-zinc-100 ring-1 ring-white/10 backdrop-blur"
+                    style={{
+                      right: "-52px",
+                      width: 36,
+                      height: 36,
+                      display: "grid",
+                      placeItems: "center",
+                      transform: `translate(${incoming}px, -50%) scale(${scale})`,
+                      opacity,
+                      transition,
+                    }}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+
+        <button
+          type="button"
+        aria-label={kind === "badge" ? "Open badges" : "Open cards"}
+          className="relative z-[1] grid h-10 w-10 place-items-center rounded-full bg-zinc-950/80 text-zinc-100 ring-1 ring-white/10 backdrop-blur select-none"
+          style={{ touchAction: "none" }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.currentTarget.setPointerCapture(e.pointerId);
+            draggingRef.current = false;
+            lastSetRef.current = null;
+            startXRef.current = e.clientX;
+            setPressed(true);
+            setDx(0);
+            setDragging(false);
+          }}
+          onPointerMove={(e) => {
+            e.preventDefault();
+            const sx = startXRef.current;
+            if (sx == null) return;
+            const nextDx = e.clientX - sx;
+            setDx(nextDx);
+
+            if (!draggingRef.current && Math.abs(nextDx) > 10) {
+              draggingRef.current = true;
+              setDragging(true);
+            }
+            if (!draggingRef.current) return;
+
+            if (Math.abs(nextDx) < 26) return;
+            const next: "cards" | "badge" = nextDx > 0 ? "badge" : "cards";
+            if (lastSetRef.current !== next) {
+              lastSetRef.current = next;
+              onChangeKind(next);
+            }
+          }}
+          onPointerUp={(e) => {
+            e.preventDefault();
+            startXRef.current = null;
+            setPressed(false);
+            setDx(0);
+            setDragging(false);
+            const wasDrag = draggingRef.current;
+            draggingRef.current = false;
+            onRelease({ kind, wasDrag });
+          }}
+          onPointerCancel={() => {
+            startXRef.current = null;
+            draggingRef.current = false;
+            setPressed(false);
+            setDx(0);
+            setDragging(false);
+          }}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {kind === "badge" ? <Sparkles className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const [pois, setPois] = useState<Poi[]>([]);
@@ -22,12 +166,84 @@ function App() {
   const [poiPanelOpen, setPoiPanelOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [mapDest, setMapDest] = useState<Poi | null>(null);
+  const [badgeScreenOpen, setBadgeScreenOpen] = useState(false);
+  const [launcherKind, setLauncherKind] = useState<"cards" | "badge">(() => {
+    try {
+      const v = localStorage.getItem("launcherKind");
+      return v === "badge" ? "badge" : "cards";
+    } catch {
+      return "cards";
+    }
+  });
+  const [badgesSbloccati, setBadgesSbloccati] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("badgesSbloccati");
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : [];
+    } catch {
+      return [];
+    }
+  });
 
   const posFallback: Poi["posizione"] = useMemo(
     () => ({ lat: 45.4631, lng: 9.1894 }),
     [],
   );
   const [posUtente, setPosUtente] = useState<Poi["posizione"] | null>(null);
+
+  const attrazioniConBadge = useMemo(
+    () => pois.filter((p) => p?.categoria === "attrazione" && !!p.badge),
+    [pois],
+  );
+
+  const tuttiBadgeSbloccati = useMemo(() => {
+    if (attrazioniConBadge.length === 0) return false;
+    return attrazioniConBadge.every((a) => badgesSbloccati.includes(a.id));
+  }, [attrazioniConBadge, badgesSbloccati]);
+
+  const [confettiOn, setConfettiOn] = useState(false);
+
+  useEffect(() => {
+    if (!tuttiBadgeSbloccati) return;
+    try {
+      const shown = localStorage.getItem("premioMostrato") === "1";
+      if (shown) return;
+      localStorage.setItem("premioMostrato", "1");
+    } catch {
+      // ignore
+    }
+
+    const poiPremio = attrazioniConBadge[0] ?? pois.find((p) => p?.categoria === "attrazione") ?? null;
+    if (poiPremio) {
+      setNotificaAttiva({
+        poi: poiPremio,
+        tipo: "attrazione",
+        motivoOverride: "Ritira il tuo premio all'uscita!",
+      });
+    }
+    setConfettiOn(true);
+    window.setTimeout(() => setConfettiOn(false), 2600);
+  }, [tuttiBadgeSbloccati, attrazioniConBadge, pois]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("badgesSbloccati", JSON.stringify(badgesSbloccati));
+    } catch {
+      // ignore
+    }
+  }, [badgesSbloccati]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("launcherKind", launcherKind);
+    } catch {
+      // ignore
+    }
+  }, [launcherKind]);
+
+  const sbloccaBadge = useCallback((attrazioneId: string) => {
+    setBadgesSbloccati((prev) => (prev.includes(attrazioneId) ? prev : [...prev, attrazioneId]));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,7 +299,7 @@ function App() {
 
       if (p.categoria === "attrazione") {
         const i = (p as Poi)["intensità"];
-        // Mostra solo attrazioni con intensità coerente con l'onboarding
+        // Only show rides matching onboarding intensity
         if (i !== "bassa" && i !== "media" && i !== "alta") continue;
         if (!profilo.intensita.includes(i)) continue;
 
@@ -125,7 +341,7 @@ function App() {
     return () => window.clearInterval(id);
   }, []);
 
-  // Notifiche: ogni 60 secondi chiama valutaTuttiIPoi (solo se posUtente è disponibile)
+  // Notifications: every 60s run valutaTuttiIPoi (only if posUtente is available)
   const posRef = useRef<Poi["posizione"] | null>(null);
   const poisFiltratiRef = useRef<Poi[]>([]);
 
@@ -218,7 +434,7 @@ function App() {
     return () => window.clearInterval(id);
   }, [onNotificaAttrazione, onNotificaRistoro]);
 
-  // Auto-chiusura popup dopo 15 secondi se non c'è interazione
+  // Auto-close popup after 15s if no interaction
   useEffect(() => {
     if (!notificaAttiva) return;
     const t = window.setTimeout(() => setNotificaAttiva(null), 15_000);
@@ -236,7 +452,7 @@ function App() {
     }
     const trigger = notificaAttiva.poi.trigger;
     if (Array.isArray(trigger) && trigger.includes("caffe"))
-      return "Tutte le attrazioni sono affollate, pausa caffè?";
+      return "All rides are crowded — coffee break?";
     if (Array.isArray(trigger) && trigger.includes("gelato")) return "Sei vicino a un chiosco gelato!";
     return "Suggerimento ristoro.";
   }, [notificaAttiva]);
@@ -284,7 +500,7 @@ function App() {
   const fallbackPoiCaffe: Poi = useMemo(
     () => ({
       id: "__debug_caffe__",
-      nome: "Demo bar (caffè)",
+      nome: "Demo bar (coffee)",
       categoria: "ristoro",
       posizione: posFallback,
       notifica_attiva: false,
@@ -303,50 +519,71 @@ function App() {
 
   return (
     <main className="relative mx-auto w-full max-w-lg overflow-x-visible bg-[#000000] px-4 py-4">
+      {/* Launcher unico: tap apre, press+drag orizzontale cambia scheda */}
+      <LauncherButton
+        kind={launcherKind}
+        onChangeKind={setLauncherKind}
+        onRelease={({ kind, wasDrag }) => {
+          // Rilascio dopo drag: apri sempre la scheda selezionata e chiudi l'altra.
+          if (wasDrag) {
+            if (kind === "badge") {
+              setPoiPanelOpen(false);
+              setBadgeScreenOpen(true);
+            } else {
+              setBadgeScreenOpen(false);
+              setPoiPanelOpen(true);
+            }
+            return;
+          }
+
+          // Tap: if the selected sheet is already open, close everything.
+          const isSelectedOpen = kind === "badge" ? badgeScreenOpen : poiPanelOpen;
+          if (isSelectedOpen) {
+            setPoiPanelOpen(false);
+            setBadgeScreenOpen(false);
+            return;
+          }
+
+          // Altrimenti apri la scheda selezionata e chiudi l'altra se era aperta.
+          if (kind === "badge") {
+            setPoiPanelOpen(false);
+            setBadgeScreenOpen(true);
+          } else {
+            setBadgeScreenOpen(false);
+            setPoiPanelOpen(true);
+          }
+        }}
+      />
+
       {poiPanelOpen ? (
         <div
-          className="fixed right-0 top-0 z-40 overflow-visible transition-transform duration-300 ease-out"
-          style={{ width: "50vw", transform: "translateY(0px)" }}
+          className="fixed left-1/2 top-14 z-40 overflow-visible transition-transform duration-300 ease-out"
+          style={{ transform: "translateX(calc(-50% - 3px))" }}
         >
-          <div className="absolute right-2 top-2 z-50">
-            <button
-              type="button"
-              className="h-6 w-10 rounded-full bg-zinc-950/80 ring-1 ring-white/10 backdrop-blur"
-              aria-label="Chiudi pannello POI"
-              onClick={() => setPoiPanelOpen(false)}
-            />
-          </div>
-
-          <div className="pointer-events-auto">
-            <POIList
-              fullBleed={false}
-              pois={poisFiltrati}
-              posUtente={posUtente ?? posFallback}
-              bellById={bellById}
-              onToggleBell={(id) => {
-                setBellById((prev) => ({ ...prev, [id]: !(prev[id] === true) }));
-                setPois((prev) =>
-                  prev.map((p) => (p?.id === id ? { ...p, notifica_attiva: !(p.notifica_attiva === true) } : p)),
-                );
-              }}
-              onNaviga={(poi) => {
-                setPoiPanelOpen(false);
-                setMapDest(poi);
-                setMapOpen(true);
-              }}
-              calcolaDistanzaM={(poiPos) => calcolaDistanza(posUtente ?? posFallback, poiPos)}
-            />
+          <div className="relative" style={{ width: "50vw", maxWidth: "32rem" }}>
+            <div className="pointer-events-auto">
+              <POIList
+                fullBleed={false}
+                pois={poisFiltrati}
+                posUtente={posUtente ?? posFallback}
+                bellById={bellById}
+                onToggleBell={(id) => {
+                  setBellById((prev) => ({ ...prev, [id]: !(prev[id] === true) }));
+                  setPois((prev) =>
+                    prev.map((p) => (p?.id === id ? { ...p, notifica_attiva: !(p.notifica_attiva === true) } : p)),
+                  );
+                }}
+                onNaviga={(poi) => {
+                  setPoiPanelOpen(false);
+                  setMapDest(poi);
+                  setMapOpen(true);
+                }}
+                calcolaDistanzaM={(poiPos) => calcolaDistanza(posUtente ?? posFallback, poiPos)}
+              />
+            </div>
           </div>
         </div>
-      ) : (
-        <button
-          type="button"
-          className="fixed right-2 top-2 z-40 h-6 w-10 rounded-full bg-zinc-950/80 ring-1 ring-white/10 backdrop-blur transition-transform duration-300 ease-out"
-          aria-label="Apri pannello POI"
-          style={{ transform: "translateY(0px)" }}
-          onClick={() => setPoiPanelOpen(true)}
-        />
-      )}
+      ) : null}
 
       <NotificationPopup
         open={notificaAttiva !== null}
@@ -370,6 +607,54 @@ function App() {
           setMapDest(null);
         }}
       />
+
+      {/* Badge sheet */}
+      <BadgeScreen
+        open={badgeScreenOpen}
+        attrazioni={attrazioniConBadge}
+        badgesSbloccati={badgesSbloccati}
+        onBadgeUnlocked={sbloccaBadge}
+        onClose={() => setBadgeScreenOpen(false)}
+      />
+
+      {/* Confetti CSS puri */}
+      {confettiOn ? (
+        <div className="pointer-events-none fixed inset-0 z-[9999] overflow-hidden">
+          <style>{`
+@keyframes confettiFall{0%{transform:translate3d(var(--x),-10vh,0) rotate(0deg);opacity:1}100%{transform:translate3d(calc(var(--x) + var(--dx)),110vh,0) rotate(var(--rot));opacity:.9}}
+`}</style>
+          {Array.from({ length: 42 }).map((_, i) => {
+            const colors = ["#60a5fa", "#34d399", "#fbbf24", "#f472b6", "#a78bfa", "#22c55e"];
+            const size = 6 + (i % 7);
+            const left = (i * 37) % 100;
+            const dx = ((i % 9) - 4) * 18;
+            const rot = ((i % 11) - 5) * 90;
+            const dur = 1200 + (i % 13) * 90;
+            const delay = (i % 7) * 30;
+            return (
+              <div
+                key={i}
+                style={
+                  {
+                    position: "absolute",
+                    left: `${left}%`,
+                    top: "-10vh",
+                    width: `${size}px`,
+                    height: `${Math.round(size * 1.2)}px`,
+                    borderRadius: "3px",
+                    background: colors[i % colors.length]!,
+                    opacity: 0.95,
+                    animation: `confettiFall ${dur}ms cubic-bezier(0.2,0.8,0.2,1) ${delay}ms forwards`,
+                    ["--x" as any]: `${left}vw`,
+                    ["--dx" as any]: `${dx}px`,
+                    ["--rot" as any]: `${rot}deg`,
+                  } as React.CSSProperties
+                }
+              />
+            );
+          })}
+        </div>
+      ) : null}
 
       {import.meta.env.DEV ? (
         <div className="fixed inset-x-0 bottom-2 z-50 mx-auto w-full max-w-lg px-4">
@@ -408,7 +693,7 @@ function App() {
                     onNotificaRistoro(first);
                   }}
                 >
-                  Test trigger caffè
+                  Test coffee trigger
                 </button>
 
                 <button
@@ -445,7 +730,7 @@ function App() {
                   className="col-span-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-semibold text-zinc-100 ring-1 ring-white/10 hover:bg-white/10"
                   onClick={() => setNotificaAttiva(null)}
                 >
-                  Chiudi popup
+                  Close popup
                 </button>
               </div>
             ) : null}
@@ -459,14 +744,14 @@ function App() {
           className="rounded-full border border-white/20 bg-zinc-900/90 px-3 py-1.5 text-left text-[11px] font-semibold text-zinc-200 shadow-lg backdrop-blur"
           onClick={() => setDebugPopup("attrazione")}
         >
-          DBG popup attrazione
+          DBG ride popup
         </button>
         <button
           type="button"
           className="rounded-full border border-white/20 bg-zinc-900/90 px-3 py-1.5 text-left text-[11px] font-semibold text-zinc-200 shadow-lg backdrop-blur"
           onClick={() => setDebugPopup("caffe")}
         >
-          DBG popup caffè
+          DBG coffee popup
         </button>
       </div>
 
@@ -484,7 +769,7 @@ function App() {
         open={debugPopup === "caffe"}
         variant="caffe"
         poi={poiDebugCaffe ?? fallbackPoiCaffe}
-        motivo="Simulazione trigger caffè: pause consigliata vicino a te."
+        motivo="Coffee trigger simulation: suggested break near you."
         onClose={() => setDebugPopup(null)}
         onNaviga={(p) => {
           console.log("[DEBUG][naviga caffe]", p);

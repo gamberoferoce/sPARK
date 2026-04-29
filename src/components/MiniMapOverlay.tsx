@@ -60,7 +60,7 @@ export function MiniMapOverlay({ open, posUtente, destinazione, onClose }: Props
         <Button
           type="button"
           variant="outline"
-          aria-label="Chiudi mappa"
+          aria-label="Close map"
           onClick={onClose}
           className="mt-3 h-9 w-9 rounded-full bg-transparent p-0"
         >

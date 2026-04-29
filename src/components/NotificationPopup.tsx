@@ -26,7 +26,7 @@ export function NotificationPopup({
 }: Props) {
   const visible = open && !!poi;
   const close = onClose ?? onChiudi ?? (() => {});
-  // UI uniforme: usa sempre il layout "caffè" per tutte le notifiche
+  // Uniform UI: always use the "coffee" layout for all notifications
   const isCaffe = true;
 
   if (!visible) return null;
@@ -36,7 +36,7 @@ export function NotificationPopup({
       <button
         type="button"
         className="absolute inset-0 bg-black/55 opacity-100 transition-opacity duration-300"
-        aria-label="Chiudi notifica"
+        aria-label="Close notification"
         onClick={close}
       />
 
@@ -63,7 +63,7 @@ export function NotificationPopup({
 
           <div className={cn("mt-4 gap-2", isCaffe ? "grid grid-cols-2" : "flex items-center")}>
             <Button className={cn("justify-center", isCaffe ? "w-full min-w-0" : "flex-1")} onClick={() => onNaviga(poi!)}>
-              Naviga
+              Navigate
               <ArrowUpRight className="ml-1.5" />
             </Button>
             <Button

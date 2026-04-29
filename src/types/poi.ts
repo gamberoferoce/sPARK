@@ -16,6 +16,11 @@ export interface Poi {
   intensità?: "bassa" | "media" | "alta";
   acquatica?: boolean;
   raggio_metri?: number;
+  badge?: {
+    simbolo: string;
+    nome: string;
+    colore: string;
+  };
   // Solo ristori
   alimenti?: string[];
   trigger?: string[];

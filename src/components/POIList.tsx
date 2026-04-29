@@ -75,9 +75,9 @@ export function POIList({
   }, [filtered, bellById, calcolaDistanzaM]);
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "attrazione", label: "Attrazioni" },
-    { id: "ristoro", label: "Ristoranti" },
-    { id: "servizi", label: "Servizi" },
+    { id: "attrazione", label: "Rides" },
+    { id: "ristoro", label: "Food" },
+    { id: "servizi", label: "Services" },
   ];
 
   useLayoutEffect(() => {
@@ -133,34 +133,28 @@ export function POIList({
         swipeRef.current = null;
       }}
     >
-      {/* Buffer invisibile per lo slide a sinistra (senza cambiare layout percepito) */}
-      <div className={cn(!fullBleed && "pl-[96px]")}>
-        <div className={cn(!fullBleed && "-translate-x-[96px] transform-gpu")}>
-          {/* Tab: tre colonne equamente spaziate; attiva = capsula grigia + padding generoso */}
-          <nav
-            className="grid w-full grid-cols-3 items-center justify-items-stretch px-4 pt-0.5"
-            aria-label="Filtri categoria"
-          >
-            {tabs.map((t) => {
-              const on = tab === t.id;
-              return (
-                <div key={t.id} className="flex justify-center px-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setTab(t.id)}
-                    className={cn(
-                      "min-h-[36px] w-full max-w-[132px] whitespace-nowrap text-center text-[14px] leading-tight transition-colors duration-150",
-                      on
-                        ? "rounded-full px-4 py-2 font-normal text-white bg-zinc-600/50 shadow-inner shadow-black/20 ring-1 ring-white/10 hover:bg-zinc-500/50"
-                        : "rounded-full bg-transparent px-2 py-2 font-normal text-white hover:bg-white/[0.08] hover:text-zinc-100",
-                    )}
-                  >
-                    {t.label}
-                  </button>
-                </div>
-              );
-            })}
-          </nav>
+      {/* Tab: tre colonne equamente spaziate; attiva = capsula grigia + padding generoso */}
+      <nav className="grid w-full grid-cols-3 items-center justify-items-stretch px-4 pt-0.5" aria-label="Filtri categoria">
+        {tabs.map((t) => {
+          const on = tab === t.id;
+          return (
+            <div key={t.id} className="flex justify-center px-0.5">
+              <button
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={cn(
+                  "min-h-[36px] w-full max-w-[132px] whitespace-nowrap text-center text-[14px] leading-tight transition-colors duration-150",
+                  on
+                    ? "rounded-full px-4 py-2 font-normal text-white bg-zinc-600/50 shadow-inner shadow-black/20 ring-1 ring-white/10 hover:bg-zinc-500/50"
+                    : "rounded-full bg-transparent px-2 py-2 font-normal text-white hover:bg-white/[0.08] hover:text-zinc-100",
+                )}
+              >
+                {t.label}
+              </button>
+            </div>
+          );
+        })}
+      </nav>
 
           {/* Spazio sotto tab prima della lista */}
           <div className="h-4" aria-hidden />
@@ -181,7 +175,13 @@ export function POIList({
             }}
           >
             <div className={cn(!fullBleed && "-translate-x-[96px] transform-gpu")}>
-              <ul className={cn("flex w-full flex-col pt-4 px-4", !fullBleed && "items-end")}>
+              <ul
+                className={cn(
+                  "flex w-full flex-col pt-4",
+                  fullBleed ? "px-4" : "pl-4 pr-0",
+                  !fullBleed && "items-end",
+                )}
+              >
           {sorted.map(({ p, m }, idx) => {
           const coda = Number(p.coda_minuti);
           const hasCoda = Number.isFinite(coda);
@@ -195,11 +195,11 @@ export function POIList({
               className={cn("w-full overflow-visible", idx > 0 && "mt-5")}
               style={{ backgroundColor: BG }}
             >
-              {/* Card pill: padding generoso; campanella metà sopra il bordo superiore */}
+              {/* Card pill: generous padding; bell sits half above top edge */}
               <div
                 className={cn(
                   "group relative overflow-visible",
-                  fullBleed ? "w-full" : "ml-auto w-[360px] max-w-full",
+                  fullBleed ? "w-full" : "ml-auto -mr-10 w-[360px] max-w-full",
                 )}
               >
                 <div
@@ -295,7 +295,7 @@ export function POIList({
 
                     <button
                       type="button"
-                      aria-label="Naviga"
+                      aria-label="Navigate"
                       onClick={(e) => {
                         e.stopPropagation();
                         onNaviga(p);
@@ -319,7 +319,7 @@ export function POIList({
               </ul>
             </div>
 
-        {/* Fade bottom: suggerisce scroll con rotella (senza mask, così non clippa lo slide laterale) */}
+        {/* Bottom fade: hints mouse-wheel scroll (no mask to avoid clipping the lateral slide) */}
         {!fullBleed ? (
           <div
             aria-hidden
@@ -330,11 +330,9 @@ export function POIList({
           />
         ) : null}
       </div>
-        </div>
-      </div>
 
       {sorted.length === 0 ? (
-        <p className="px-8 py-10 text-center text-sm text-zinc-500">Nessun elemento in questa categoria.</p>
+        <p className="px-8 py-10 text-center text-sm text-zinc-500">No items in this category.</p>
       ) : null}
     </div>
   );

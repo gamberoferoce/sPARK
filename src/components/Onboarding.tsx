@@ -24,8 +24,17 @@ type Props = {
 
 const ALL_INTENSITA: Intensita[] = ["bassa", "media", "alta"];
 const ALL_DIETE: Dieta[] = ["normale", "vegano", "celiaco"];
+const INTENSITA_LABEL_EN: Record<Intensita, string> = {
+  bassa: "Low",
+  media: "Medium",
+  alta: "High",
+};
+const DIETA_LABEL_EN: Record<Dieta, string> = {
+  normale: "Normal",
+  vegano: "Vegan",
+  celiaco: "Gluten free",
+};
 
-const STEP_LABELS = ["Intro", "Altezza", "Dieta", "Intensità"] as const;
 const STEP_ICONS = [Sparkles, Ruler, UtensilsCrossed, Zap] as const;
 
 const HEIGHT_MIN = 90;
@@ -104,6 +113,7 @@ function HeightTick({
   }, [index, scrollLeft, sidePadRef, viewportWRef]);
   const textColor = color > 0.5 ? "rgb(244 244 245)" : "rgb(161 161 170)";
   const fontWeight = color > 0.5 ? 600 : 500;
+  const finalTextColor = color > 0.5 ? "#ffffff" : textColor;
 
   return (
     <div
@@ -112,7 +122,7 @@ function HeightTick({
         flex: `0 0 ${HEIGHT_ITEM_PX}px`,
         transform: `scale(${scale})`,
         opacity,
-        color: textColor,
+        color: finalTextColor,
         fontWeight,
       }}
       className="pointer-events-none snap-center scroll-mx-0 py-2 text-center text-sm tabular-nums transition-[transform,opacity] duration-200 will-change-transform motion-reduce:transition-none"
@@ -243,7 +253,7 @@ function HeightCenterCarousel({
     <div ref={measureRef} className="mt-4">
       <div className="relative -mx-1">
         <div
-          className="pointer-events-none absolute bottom-1 left-1/2 top-1 z-10 w-px -translate-x-1/2 bg-white"
+          className="pointer-events-none absolute bottom-1.5 left-1/2 z-10 h-px w-10 -translate-x-1/2 bg-white"
           style={{ opacity: centerLineOpacity }}
           aria-hidden
         />
@@ -254,7 +264,7 @@ function HeightCenterCarousel({
           aria-valuemin={HEIGHT_MIN}
           aria-valuemax={HEIGHT_MAX}
           aria-valuenow={value}
-          aria-label="Altezza in centimetri"
+          aria-label="Height in centimeters"
           tabIndex={0}
           onScroll={() => {
             setScrollLeft(scrollerRef.current?.scrollLeft ?? 0);
@@ -328,26 +338,31 @@ export function Onboarding({ onComplete }: Props) {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center px-4">
-      <div className="pointer-events-auto flex h-[50dvh] max-h-[50dvh] w-full max-w-lg flex-col bg-black">
+      <div className="pointer-events-auto flex h-[42dvh] max-h-[42dvh] w-full max-w-lg flex-col bg-black">
         <main className="flex min-h-0 w-full flex-1 flex-col px-4">
           <div className="shrink-0 pb-3 pt-2">
-            <div className="grid grid-cols-4 gap-2">
-              {([0, 1, 2, 3] as const).map((i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => {
-                    if (i <= step) setStep(i);
-                  }}
-                  className={[
-                    "rounded-[22px] px-3 py-2 text-sm font-semibold transition-colors",
-                    step === i ? "bg-white/10 text-zinc-100" : i < step ? "text-zinc-300 hover:bg-white/5" : "text-zinc-500",
-                    i > step ? "pointer-events-none" : "",
-                  ].join(" ")}
-                >
-                  {STEP_LABELS[i]}
-                </button>
-              ))}
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {([0, 1, 2, 3] as const).map((i) => {
+                const done = i < step;
+                const on = i === step;
+                const disabled = i > step;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => {
+                      if (i <= step) setStep(i);
+                    }}
+                    aria-label={`Vai allo step ${i + 1}`}
+                    className={[
+                      "h-2 rounded-full transition-colors",
+                      on ? "bg-white/30" : done ? "bg-white/15 hover:bg-white/20" : "bg-white/5",
+                      disabled ? "opacity-40" : "",
+                    ].join(" ")}
+                  />
+                );
+              })}
             </div>
           </div>
 
@@ -360,22 +375,22 @@ export function Onboarding({ onComplete }: Props) {
                 ].join(" ")}
               >
                 <div className="flex items-start gap-3">
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/5 ring-1 ring-white/10">
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-transparent ring-1 ring-white">
                     <StepIcon className="h-4 w-4 text-zinc-200" />
                   </span>
                   <div className="min-w-0 flex-1">
                     {step === 0 ? (
                       <div>
                         <p className="text-sm font-medium leading-relaxed text-zinc-200">
-                          Giusto un paio di informazioni per personalizzare la tua esperienza.
+                          Just a couple of details to personalize your experience.
                         </p>
                       </div>
                     ) : null}
 
                     {step === 1 ? (
                       <div>
-                        <div className="text-sm font-semibold text-zinc-100">Altezza</div>
-                        <p className="mt-0.5 text-xs text-zinc-400">Serve per filtrare le attrazioni.</p>
+                        <div className="text-sm font-semibold text-zinc-100">Height</div>
+                        <p className="mt-0.5 text-xs text-zinc-400">Used to filter rides.</p>
 
                         <HeightCenterCarousel
                           value={altezza}
@@ -387,8 +402,8 @@ export function Onboarding({ onComplete }: Props) {
 
                     {step === 2 ? (
                       <div>
-                        <div className="text-sm font-semibold text-zinc-100">Preferenze alimentari</div>
-                        <p className="mt-0.5 text-xs text-zinc-400">Mostreremo solo ristori compatibili.</p>
+                        <div className="text-sm font-semibold text-zinc-100">Dietary preferences</div>
+                        <p className="mt-0.5 text-xs text-zinc-400">We’ll only show compatible food spots.</p>
 
                         <div className="mt-4 space-y-3">
                           {ALL_DIETE.map((d) => {
@@ -406,7 +421,7 @@ export function Onboarding({ onComplete }: Props) {
                                     : "bg-zinc-900/40 text-zinc-400 ring-white/10 hover:bg-white/5 hover:text-zinc-200",
                                 ].join(" ")}
                               >
-                                {d}
+                                {DIETA_LABEL_EN[d]}
                               </button>
                             );
                           })}
@@ -416,8 +431,8 @@ export function Onboarding({ onComplete }: Props) {
 
                     {step === 3 ? (
                       <div>
-                        <div className="text-sm font-semibold text-zinc-100">Livello intensità</div>
-                        <p className="mt-0.5 text-xs text-zinc-400">Filtreremo le attrazioni per intensità.</p>
+                        <div className="text-sm font-semibold text-zinc-100">Thrill level</div>
+                        <p className="mt-0.5 text-xs text-zinc-400">We’ll filter rides by intensity.</p>
 
                         <div className="mt-4 space-y-3">
                           {ALL_INTENSITA.map((a) => {
@@ -435,7 +450,7 @@ export function Onboarding({ onComplete }: Props) {
                                     : "bg-zinc-900/40 text-zinc-400 ring-white/10 hover:bg-white/5 hover:text-zinc-200",
                                 ].join(" ")}
                               >
-                                {a}
+                                {INTENSITA_LABEL_EN[a]}
                               </button>
                             );
                           })}
@@ -449,21 +464,31 @@ export function Onboarding({ onComplete }: Props) {
           </div>
         </main>
 
-        <footer className="shrink-0 bg-black px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
+        <footer className="shrink-0 bg-black px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5">
           <div className="flex w-full items-center justify-between gap-2">
             <Button
               variant="outline"
-              className="bg-transparent"
+              size="lg"
+              className="bg-transparent min-w-[96px]"
               disabled={step === 0}
               onClick={() => setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2 | 3)))}
             >
-              Indietro
+              Back
             </Button>
 
             {step < 3 ? (
-              <Button onClick={() => setStep((s) => ((s + 1) as 0 | 1 | 2 | 3))}>Avanti</Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="bg-transparent min-w-[96px]"
+                onClick={() => setStep((s) => ((s + 1) as 0 | 1 | 2 | 3))}
+              >
+                Next
+              </Button>
             ) : (
-              <Button onClick={() => onComplete(profilo)}>Inizia</Button>
+              <Button size="lg" className="min-w-[96px]" onClick={() => onComplete(profilo)}>
+                Start
+              </Button>
             )}
           </div>
         </footer>
