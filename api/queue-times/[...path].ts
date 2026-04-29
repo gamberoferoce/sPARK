@@ -34,14 +34,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    // Prefer JSON, but avoid crashing if upstream returns non-JSON.
+    // Prefer JSON. If a .json endpoint returns HTML (common when blocked), surface a 502 JSON error
+    // so the client doesn't crash on response.json().
     if (contentType.includes("application/json")) {
       const data = await response.json();
       res.status(200).json(data);
       return;
     }
 
-    const text = await response.text();
+    const text = await response.text().catch(() => "");
+    if (safePath.endsWith(".json")) {
+      res.status(502).json({
+        error: "Upstream did not return JSON",
+        upstreamStatus: response.status,
+        contentType,
+        snippet: text.slice(0, 200),
+      });
+      return;
+    }
+
     res.status(200).send(text);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
