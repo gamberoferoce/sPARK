@@ -292,7 +292,9 @@ function App() {
 
     const run = async () => {
       try {
-        const base = import.meta.env.DEV ? "/queue-times" : "/api/queue-times";
+        const base = import.meta.env.DEV
+          ? "/queue-times"
+          : "https://queue-times-proxy.giuliafanasca.workers.dev/api/queue-times";
         const res = await fetch(`${base}/parks.json`, { signal: ctrl.signal });
         if (!res.ok) return;
         const json = (await res.json()) as unknown;
@@ -345,7 +347,9 @@ function App() {
 
     const tick = async () => {
       try {
-        const base = import.meta.env.DEV ? "/queue-times" : "/api/queue-times";
+        const base = import.meta.env.DEV
+          ? "/queue-times"
+          : "https://queue-times-proxy.giuliafanasca.workers.dev/api/queue-times";
         const res = await fetch(`${base}/parks/${queueTimesParkId}/queue_times.json`);
         if (!res.ok) return;
         const data = (await res.json()) as unknown;
