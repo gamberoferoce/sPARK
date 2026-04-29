@@ -7,6 +7,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // Silence large-chunk warning (aframe-ar bundle is ~3.7MB minified)
+    chunkSizeWarningLimit: 5000,
+  },
   server: {
     proxy: {
       "/queue-times": {

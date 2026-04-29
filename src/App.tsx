@@ -319,7 +319,7 @@ function App() {
         }
 
         if (foundId != null) {
-          console.log("[QUEUE-TIMES PARK ID]:", foundId);
+          if (import.meta.env.DEV) console.log("[QUEUE-TIMES PARK ID]:", foundId);
           setQueueTimesParkId(foundId);
         }
       } catch {
@@ -393,7 +393,9 @@ function App() {
         }
 
         if (noMatches.length) {
-          for (const n of noMatches) console.log("[QUEUE-TIMES NO MATCH]:", n);
+          for (const n of noMatches) {
+            if (import.meta.env.DEV) console.log("[QUEUE-TIMES NO MATCH]:", n);
+          }
         }
 
         if (updates.size === 0) return;
@@ -471,6 +473,8 @@ function App() {
 
   // Simula code dinamiche: ogni 90 secondi aggiorna coda_minuti dei POI nello stato React
   useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
     function randomInt(min: number, max: number) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
@@ -507,7 +511,7 @@ function App() {
 
   const onNotificaAttrazione = useCallback(
     (poi: unknown, tipo?: "attrazione" | "post_pranzo" | "ultimo_giro") => {
-      console.log("[NOTIFICA][ATTRAZIONE]", poi);
+      if (import.meta.env.DEV) console.log("[NOTIFICA][ATTRAZIONE]", poi);
       // Se arriva una notifica, chiudi il panel POI per non coprire il popup.
       setPoiPanelOpen(false);
       if (poi && typeof poi === "object") {
@@ -519,7 +523,7 @@ function App() {
   );
 
   const onNotificaRistoro = useCallback((poi: unknown) => {
-    console.log("[NOTIFICA][RISTORO]", poi);
+    if (import.meta.env.DEV) console.log("[NOTIFICA][RISTORO]", poi);
     // Se arriva una notifica, chiudi il panel POI per non coprire il popup.
     setPoiPanelOpen(false);
     if (poi && typeof poi === "object") {
@@ -913,7 +917,7 @@ function App() {
         motivo="Simulazione: coda favorevole — momento buono per entrare in attrazione."
         onClose={() => setDebugPopup(null)}
         onNaviga={(p) => {
-          console.log("[DEBUG][naviga attrazione]", p);
+          if (import.meta.env.DEV) console.log("[DEBUG][naviga attrazione]", p);
           setDebugPopup(null);
         }}
       />
@@ -924,7 +928,7 @@ function App() {
         motivo="Coffee trigger simulation: suggested break near you."
         onClose={() => setDebugPopup(null)}
         onNaviga={(p) => {
-          console.log("[DEBUG][naviga caffe]", p);
+          if (import.meta.env.DEV) console.log("[DEBUG][naviga caffe]", p);
           setDebugPopup(null);
         }}
       />
