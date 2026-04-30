@@ -16,14 +16,14 @@ type Props = {
 
 type Tab = "attrazione" | "ristoro" | "servizi";
 
-/** Screenshot: nero pieno */
-const BG = "#000000";
+/** Background behind the cards should be transparent (video shows through). */
+const BG = "transparent";
 /** Card: grigio molto scuro, appena sopra il nero */
-const CARD_BG = "#0a0a0a";
+const CARD_BG = "rgba(0,0,0,0.45)";
 /** Bordo sottile card / divisori */
 const LINE = "#27272a";
 /** Cerchio icona / campanella */
-const CIRCLE_BG = "#18181b";
+const CIRCLE_BG = "rgba(0,0,0,0.55)";
 
 function formatDistanza(metri: number) {
   if (!Number.isFinite(metri)) return "—";

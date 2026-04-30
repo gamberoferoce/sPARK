@@ -166,7 +166,7 @@ export function BadgeScanner({
   if (!open) return null;
 
   return (
-    <div className={containerClassName ?? "fixed inset-0 z-[90] bg-black"}>
+    <div className={containerClassName ?? "fixed inset-0 z-[90] bg-black/35 backdrop-blur-[1px]"}>
       <div className="absolute inset-0">
         <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
         <canvas ref={canvasRef} className="hidden" />

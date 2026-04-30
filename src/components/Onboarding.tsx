@@ -338,7 +338,7 @@ export function Onboarding({ onComplete }: Props) {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center px-4">
-      <div className="pointer-events-auto flex h-[42dvh] max-h-[42dvh] w-full max-w-lg flex-col bg-black">
+      <div className="pointer-events-auto flex h-[42dvh] max-h-[42dvh] w-full max-w-lg flex-col bg-black/45 ring-1 ring-white/10 backdrop-blur">
         <main className="flex min-h-0 w-full flex-1 flex-col px-4">
           <div className="shrink-0 pb-3 pt-2">
             <div className="mt-2 grid grid-cols-4 gap-2">
@@ -464,7 +464,7 @@ export function Onboarding({ onComplete }: Props) {
           </div>
         </main>
 
-        <footer className="shrink-0 bg-black px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5">
+        <footer className="shrink-0 bg-transparent px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5">
           <div className="flex w-full items-center justify-between gap-2">
             <Button
               variant="outline"

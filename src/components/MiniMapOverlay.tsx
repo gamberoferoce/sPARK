@@ -49,7 +49,7 @@ export function MiniMapOverlay({ open, posUtente, destinazione, onClose }: Props
         )}
 
         <div
-          className="relative h-[200px] w-[200px] overflow-hidden rounded-full bg-zinc-950 ring-1 ring-white/10"
+          className="relative h-[200px] w-[200px] overflow-hidden rounded-full bg-black/20 ring-1 ring-white/10 backdrop-blur-[1px]"
           style={{
             WebkitMaskImage:
               "radial-gradient(circle at center, rgba(0,0,0,1) 68%, rgba(0,0,0,0) 100%)",

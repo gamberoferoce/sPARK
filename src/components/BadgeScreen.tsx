@@ -96,12 +96,12 @@ export function BadgeScreen({ open, attrazioni, badgesSbloccati, onBadgeUnlocked
                   setScanActive(false);
                   onClose();
                 }}
-                containerClassName="absolute inset-0 bg-black"
+                containerClassName="absolute inset-0 bg-black/40 backdrop-blur-[1px]"
                 reticlePlacement="betweenTopAndButton"
               />
 
               {!scanActive ? (
-                <div className="absolute inset-0 grid place-items-center bg-black">
+                <div className="absolute inset-0 grid place-items-center bg-black/35 backdrop-blur-[1px]">
                   <button
                     type="button"
                     className="rounded-full bg-zinc-950/80 px-6 py-3 text-sm font-semibold text-zinc-100 ring-1 ring-white/10 backdrop-blur transition-colors duration-150 hover:bg-white/10"
