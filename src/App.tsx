@@ -288,6 +288,8 @@ function App() {
       s
         .toLowerCase()
         .trim()
+        // make matching tolerant to punctuation/hyphens
+        .replace(/[^a-z0-9]+/g, " ")
         .replace(/\s+/g, " ");
 
     const run = async () => {
@@ -312,7 +314,7 @@ function App() {
             const name = typeof p?.name === "string" ? (p.name as string) : "";
             const id = typeof p?.id === "number" ? (p.id as number) : null;
             if (!name || id == null) continue;
-            if (normalizeName(name) === normalizeName("Gardaland")) {
+            if (normalizeName(name) === normalizeName("Europa-Park")) {
               foundId = id;
               break;
             }
@@ -343,6 +345,8 @@ function App() {
       s
         .toLowerCase()
         .trim()
+        // make matching tolerant to punctuation/hyphens
+        .replace(/[^a-z0-9]+/g, " ")
         .replace(/\s+/g, " ");
 
     const tick = async () => {
