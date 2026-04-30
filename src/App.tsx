@@ -8,6 +8,7 @@ import { calcolaDistanza, valutaTriggerAsciugatura } from "@/core/algorithm.js";
 import { valutaTuttiIPoi } from "@/core/notifications.js";
 import { PARCO } from "@/core/config.js";
 import type { Poi } from "@/types/poi";
+import { enterAR, exitAR } from "@/xr/iwsdk";
 
 function LauncherButton({
   kind,
@@ -189,6 +190,7 @@ function App() {
   const [mapOpen, setMapOpen] = useState(false);
   const [mapDest, setMapDest] = useState<Poi | null>(null);
   const [badgeScreenOpen, setBadgeScreenOpen] = useState(false);
+  const [xrOpen, setXrOpen] = useState(false);
   const [launcherKind, setLauncherKind] = useState<"cards" | "badge">(() => {
     try {
       const v = localStorage.getItem("launcherKind");
@@ -726,6 +728,29 @@ function App() {
           }
         }}
       />
+
+      {/* Enter AR (Quest Browser) */}
+      <div className="fixed left-3 bottom-3 z-[95]">
+        <button
+          type="button"
+          className="rounded-full bg-black/40 px-4 py-2 text-xs font-semibold text-zinc-100 ring-1 ring-white/10 backdrop-blur hover:bg-white/10"
+          onClick={async () => {
+            try {
+              if (xrOpen) {
+                await exitAR();
+                setXrOpen(false);
+                return;
+              }
+              await enterAR();
+              setXrOpen(true);
+            } catch {
+              // ignore (unsupported / denied)
+            }
+          }}
+        >
+          {xrOpen ? "Exit AR" : "Enter AR"}
+        </button>
+      </div>
 
       {poiPanelOpen ? (
         <div
