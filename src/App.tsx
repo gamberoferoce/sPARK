@@ -276,7 +276,7 @@ function App() {
     };
   }, []);
 
-  // Queue-Times.com integration (Mirabilandia live wait times)
+  // Queue-Times.com integration (Gardaland live wait times)
   useEffect(() => {
     if (!pois || pois.length === 0) return;
     if (queueTimesParkId != null) return;
@@ -312,7 +312,7 @@ function App() {
             const name = typeof p?.name === "string" ? (p.name as string) : "";
             const id = typeof p?.id === "number" ? (p.id as number) : null;
             if (!name || id == null) continue;
-            if (normalizeName(name) === normalizeName("Mirabilandia")) {
+            if (normalizeName(name) === normalizeName("Gardaland")) {
               foundId = id;
               break;
             }
