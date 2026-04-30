@@ -450,7 +450,7 @@ function App() {
     const out: Poi[] = [];
     for (const p of pois) {
       if (!p || !p.id) continue;
-      if (p.categoria === "servizi") {
+      if (p.categoria === "servizi" || p.categoria === "wc" || p.categoria === "asciugatura") {
         out.push(p);
         continue;
       }
@@ -549,7 +549,7 @@ function App() {
     if (!pos) return;
 
     const attrAcquatiche = pois.filter((p) => p?.categoria === "attrazione" && p.acquatica === true);
-    const asciugature = pois.filter((p) => p?.categoria === "servizi" && p.servizio_tipo === "asciugatura");
+    const asciugature = pois.filter((p) => p?.categoria === "asciugatura");
 
     let inside: Poi | null = null;
     for (const a of attrAcquatiche) {

@@ -1,4 +1,4 @@
-export type Categoria = "attrazione" | "ristoro" | "servizi";
+export type Categoria = "attrazione" | "ristoro" | "servizi" | "wc" | "asciugatura";
 
 export type ServizioTipo = "wc" | "asciugatura";
 

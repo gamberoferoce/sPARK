@@ -900,174 +900,220 @@
     "orario_chiusura": "18:00"
   },
   {
-    "id": "asciug-divertical",
-    "nome": "punto asciugatura - Divertical",
-    "categoria": "servizi",
-    "servizio_tipo": "asciugatura",
-    "posizione": { "lat": 44.3374, "lng": 12.2688 },
+    "id": "asciug-josefina-s-magical-imperial-journey-dryer",
+    "nome": "Josefina's Magical Imperial Journey - Dryer",
+    "categoria": "asciugatura",
+    "posizione": { "lat": 48.2640, "lng": 7.7214 },
     "notifica_attiva": false,
-    "orario_apertura": "11:00",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "asciug-el-dorado-falls",
-    "nome": "punto asciugatura - El Dorado Falls",
-    "categoria": "servizi",
-    "servizio_tipo": "asciugatura",
-    "posizione": { "lat": 44.337, "lng": 12.2645 },
+    "id": "asciug-tirol-log-flume-dryer",
+    "nome": "Tirol Log Flume - Dryer",
+    "categoria": "asciugatura",
+    "posizione": { "lat": 48.2632, "lng": 7.7229 },
     "notifica_attiva": false,
-    "orario_apertura": "11:00",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "asciug-rio-bravo",
-    "nome": "punto asciugatura - Rio Bravo",
-    "categoria": "servizi",
-    "servizio_tipo": "asciugatura",
-    "posizione": { "lat": 44.3384, "lng": 12.2638 },
+    "id": "asciug-water-rollercoaster-poseidon-dryer",
+    "nome": "Water rollercoaster Poseidon - Dryer",
+    "categoria": "asciugatura",
+    "posizione": { "lat": 48.2621, "lng": 7.7191 },
     "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "asciug-autosplash",
-    "nome": "punto asciugatura - Autosplash",
-    "categoria": "servizi",
-    "servizio_tipo": "asciugatura",
-    "posizione": { "lat": 44.3362, "lng": 12.2628 },
+    "id": "asciug-whale-adventures-northern-lights-dryer",
+    "nome": "Whale Adventures - Northern Lights - Dryer",
+    "categoria": "asciugatura",
+    "posizione": { "lat": 48.2638, "lng": 7.7164 },
     "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "asciug-raratonga",
-    "nome": "punto asciugatura - Raratonga",
-    "categoria": "servizi",
-    "servizio_tipo": "asciugatura",
-    "posizione": { "lat": 44.3347, "lng": 12.2672 },
+    "id": "asciug-pirates-in-batavia-dryer",
+    "nome": "Pirates in Batavia - Dryer",
+    "categoria": "asciugatura",
+    "posizione": { "lat": 48.2656, "lng": 7.7192 },
     "notifica_attiva": false,
-    "orario_apertura": "11:00",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-ingresso-e-pirate-beach",
-    "nome": "wc - Ingresso e Pirate Beach",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3338, "lng": 12.2615 },
+    "id": "asciug-atlantica-supersplash-dryer",
+    "nome": "Atlantica SuperSplash - Dryer",
+    "categoria": "asciugatura",
+    "posizione": { "lat": 48.2608, "lng": 7.7187 },
     "notifica_attiva": false,
-    "orario_apertura": "10:00",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-ducati-world",
-    "nome": "wc - Ducati World",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3347, "lng": 12.2638 },
+    "id": "asciug-fjord-rafting-dryer",
+    "nome": "Fjord-Rafting - Dryer",
+    "categoria": "asciugatura",
+    "posizione": { "lat": 48.2644, "lng": 7.7177 },
     "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-dinoland",
-    "nome": "wc - Dinoland",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3335, "lng": 12.2655 },
+    "id": "wc-spagna",
+    "nome": "WC - Spagna",
+    "categoria": "wc",
+    "posizione": { "lat": 48.261088, "lng": 7.719001 },
     "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-bimbopoli",
-    "nome": "wc - Bimbopoli",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.333, "lng": 12.2642 },
+    "id": "wc-grecia",
+    "nome": "WC - Grecia",
+    "categoria": "wc",
+    "posizione": { "lat": 48.262142, "lng": 7.719726 },
     "notifica_attiva": false,
-    "orario_apertura": "10:00",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-nickelodeon-land",
-    "nome": "wc - Nickelodeon Land",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3352, "lng": 12.2665 },
+    "id": "wc-scandinavia",
+    "nome": "WC - Scandinavia",
+    "categoria": "wc",
+    "posizione": { "lat": 48.263064, "lng": 7.718717 },
     "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-route-66-self-service",
-    "nome": "wc - Route 66 (Self Service)",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3362, "lng": 12.2632 },
+    "id": "wc-svizzera",
+    "nome": "WC - Svizzera",
+    "categoria": "wc",
+    "posizione": { "lat": 48.26361, "lng": 7.723153 },
     "notifica_attiva": false,
-    "orario_apertura": "11:30",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-far-west-valley",
-    "nome": "wc - Far West Valley",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3388, "lng": 12.2622 },
+    "id": "wc-russia",
+    "nome": "WC - Russia",
+    "categoria": "wc",
+    "posizione": { "lat": 48.26366, "lng": 7.72182 },
     "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-adventureland-rio-bravo",
-    "nome": "wc - Adventureland (Rio Bravo)",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3385, "lng": 12.264 },
+    "id": "wc-inghilterra",
+    "nome": "WC - Inghilterra",
+    "categoria": "wc",
+    "posizione": { "lat": 48.264657, "lng": 7.721248 },
     "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-area-maya-katun",
-    "nome": "wc - Area Maya (Katun)",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3392, "lng": 12.266 },
+    "id": "wc-olanda",
+    "nome": "WC - Olanda",
+    "categoria": "wc",
+    "posizione": { "lat": 48.264645, "lng": 7.720192 },
     "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-reset-new-york",
-    "nome": "wc - Reset (New York)",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3355, "lng": 12.268 },
+    "id": "wc-francia",
+    "nome": "WC - Francia",
+    "categoria": "wc",
+    "posizione": { "lat": 48.267287, "lng": 7.721349 },
     "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-divertical",
-    "nome": "wc - Divertical",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3375, "lng": 12.2695 },
+    "id": "wc-germania-castello",
+    "nome": "WC - Germania (Castello)",
+    "categoria": "wc",
+    "posizione": { "lat": 48.266728, "lng": 7.722959 },
     "notifica_attiva": false,
-    "orario_apertura": "11:00",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
-    "id": "wc-eurowheel",
-    "nome": "wc - Eurowheel",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3358, "lng": 12.266 },
+    "id": "wc-italia",
+    "nome": "WC - Italia",
+    "categoria": "wc",
+    "posizione": { "lat": 48.265058, "lng": 7.722013 },
     "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
+  },
+  {
+    "id": "wc-germania-ingresso",
+    "nome": "WC - Germania (Ingresso)",
+    "categoria": "wc",
+    "posizione": { "lat": 48.268149, "lng": 7.723486 },
+    "notifica_attiva": false,
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
+  },
+  {
+    "id": "wc-francia-silver-star",
+    "nome": "WC - Francia (Silver Star)",
+    "categoria": "wc",
+    "posizione": { "lat": 48.26776, "lng": 7.719906 },
+    "notifica_attiva": false,
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
+  },
+  {
+    "id": "wc-francia-cafe-de-paris",
+    "nome": "WC - Francia (Café de Paris)",
+    "categoria": "wc",
+    "posizione": { "lat": 48.268005, "lng": 7.721194 },
+    "notifica_attiva": false,
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
+  },
+  {
+    "id": "wc-francia-eurosat",
+    "nome": "WC - Francia (Eurosat)",
+    "categoria": "wc",
+    "posizione": { "lat": 48.268319, "lng": 7.721099 },
+    "notifica_attiva": false,
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
+  },
+  {
+    "id": "wc-germania-cafe-benedetto",
+    "nome": "WC - Germania (Café Benedetto)",
+    "categoria": "wc",
+    "posizione": { "lat": 48.268287, "lng": 7.722654 },
+    "notifica_attiva": false,
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
+  },
+  {
+    "id": "wc-germania-ingresso-principale",
+    "nome": "WC - Germania (Ingresso Principale)",
+    "categoria": "wc",
+    "posizione": { "lat": 48.269205, "lng": 7.721939 },
+    "notifica_attiva": false,
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
+  },
+  {
+    "id": "wc-croazia",
+    "nome": "WC - Croazia",
+    "categoria": "wc",
+    "posizione": { "lat": 48.265638, "lng": 7.718787 },
+    "notifica_attiva": false,
+    "orario_apertura": "09:00",
+    "orario_chiusura": "19:00"
   },
   {
     "id": "rist-drive-in",
@@ -1296,176 +1342,5 @@
     "notifica_attiva": false,
     "orario_apertura": "11:30",
     "orario_chiusura": "17:30"
-  },
-
-  {
-    "id": "asciug-divertical",
-    "nome": "punto asciugatura - Divertical",
-    "categoria": "servizi",
-    "servizio_tipo": "asciugatura",
-    "posizione": { "lat": 44.3374, "lng": 12.2688 },
-    "notifica_attiva": false,
-    "orario_apertura": "11:00",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "asciug-el-dorado-falls",
-    "nome": "punto asciugatura - El Dorado Falls",
-    "categoria": "servizi",
-    "servizio_tipo": "asciugatura",
-    "posizione": { "lat": 44.337, "lng": 12.2645 },
-    "notifica_attiva": false,
-    "orario_apertura": "11:00",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "asciug-rio-bravo",
-    "nome": "punto asciugatura - Rio Bravo",
-    "categoria": "servizi",
-    "servizio_tipo": "asciugatura",
-    "posizione": { "lat": 44.3384, "lng": 12.2638 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "asciug-autosplash",
-    "nome": "punto asciugatura - Autosplash",
-    "categoria": "servizi",
-    "servizio_tipo": "asciugatura",
-    "posizione": { "lat": 44.3362, "lng": 12.2628 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "asciug-raratonga",
-    "nome": "punto asciugatura - Raratonga",
-    "categoria": "servizi",
-    "servizio_tipo": "asciugatura",
-    "posizione": { "lat": 44.3347, "lng": 12.2672 },
-    "notifica_attiva": false,
-    "orario_apertura": "11:00",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-ingresso-e-pirate-beach",
-    "nome": "wc - Ingresso e Pirate Beach",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3338, "lng": 12.2615 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:00",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-ducati-world",
-    "nome": "wc - Ducati World",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3347, "lng": 12.2638 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-dinoland",
-    "nome": "wc - Dinoland",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3335, "lng": 12.2655 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-bimbopoli",
-    "nome": "wc - Bimbopoli",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.333, "lng": 12.2642 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:00",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-nickelodeon-land",
-    "nome": "wc - Nickelodeon Land",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3352, "lng": 12.2665 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-route-66-self-service",
-    "nome": "wc - Route 66 (Self Service)",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3362, "lng": 12.2632 },
-    "notifica_attiva": false,
-    "orario_apertura": "11:30",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-far-west-valley",
-    "nome": "wc - Far West Valley",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3388, "lng": 12.2622 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-adventureland-rio-bravo",
-    "nome": "wc - Adventureland (Rio Bravo)",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3385, "lng": 12.264 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-area-maya-katun",
-    "nome": "wc - Area Maya (Katun)",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3392, "lng": 12.266 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-reset-new-york",
-    "nome": "wc - Reset (New York)",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3355, "lng": 12.268 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-divertical",
-    "nome": "wc - Divertical",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3375, "lng": 12.2695 },
-    "notifica_attiva": false,
-    "orario_apertura": "11:00",
-    "orario_chiusura": "18:00"
-  },
-  {
-    "id": "wc-eurowheel",
-    "nome": "wc - Eurowheel",
-    "categoria": "servizi",
-    "servizio_tipo": "wc",
-    "posizione": { "lat": 44.3358, "lng": 12.266 },
-    "notifica_attiva": false,
-    "orario_apertura": "10:30",
-    "orario_chiusura": "18:00"
   }
 ]

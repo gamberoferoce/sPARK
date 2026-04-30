@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, Bell, MapPin, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Poi, Categoria } from "@/types/poi";
+import type { Poi } from "@/types/poi";
 
 type Props = {
   pois: Poi[];
@@ -13,7 +13,7 @@ type Props = {
   fullBleed?: boolean;
 };
 
-type Tab = Categoria;
+type Tab = "attrazione" | "ristoro" | "servizi";
 
 /** Screenshot: nero pieno */
 const BG = "#000000";
@@ -54,7 +54,15 @@ export function POIList({
   const firstLiRef = useRef<HTMLLIElement | null>(null);
   const [panelMaxH, setPanelMaxH] = useState<number | null>(null);
 
-  const filtered = useMemo(() => pois.filter((p) => p && p.categoria === tab), [pois, tab]);
+  const filtered = useMemo(() => {
+    const list = Array.isArray(pois) ? pois : [];
+    if (tab === "servizi") {
+      return list.filter(
+        (p) => p && (p.categoria === "servizi" || p.categoria === "wc" || p.categoria === "asciugatura"),
+      );
+    }
+    return list.filter((p) => p && p.categoria === tab);
+  }, [pois, tab]);
 
   const sorted = useMemo(() => {
     const list = filtered.map((p) => ({
