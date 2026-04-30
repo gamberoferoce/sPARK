@@ -461,8 +461,6 @@ function App() {
 
   // Simula code dinamiche: ogni 90 secondi aggiorna coda_minuti dei POI nello stato React
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
-
     function randomInt(min: number, max: number) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
@@ -473,7 +471,8 @@ function App() {
           if (!p || !p.id) return p;
           if (p.categoria === "ristoro") return { ...p, coda_minuti: randomInt(0, 25) };
           if (p.categoria === "wc") return { ...p, coda_minuti: randomInt(0, 5) };
-          return p; // non toccare attrazioni, asciugatura
+          if (p.categoria === "asciugatura") return { ...p, coda_minuti: randomInt(0, 5) };
+          return p; // non toccare attrazioni (arrivano da Queue-Times)
         }),
       );
     }, 90 * 1000);

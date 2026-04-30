@@ -198,7 +198,9 @@ export function POIList({
           const bellOn = bellById[p.id] === true;
           const isClosed = parcoClosed || coda === -1;
           const showWait =
-            (tab === "attrazione" || (tab === "servizi" && p.categoria === "wc")) &&
+            (tab === "attrazione" ||
+              tab === "ristoro" ||
+              (tab === "servizi" && (p.categoria === "wc" || p.categoria === "asciugatura"))) &&
             hasCoda &&
             coda >= 0 &&
             parcoClosed !== true;
