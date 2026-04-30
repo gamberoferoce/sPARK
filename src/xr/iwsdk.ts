@@ -1,8 +1,8 @@
-import { ReferenceSpaceType, SessionMode, World } from "@iwsdk/core";
-import { Quaternion, Vector3 } from "three";
+import { SessionMode, World } from "@iwsdk/core";
+import { Container, Image as UiImage, Text } from "@pmndrs/uikit";
 
 let worldPromise: Promise<World> | null = null;
-let stopDomPointer: (() => void) | null = null;
+let stopWorldUi: (() => void) | null = null;
 
 function ensureContainer() {
   let el = document.getElementById("xr-scene") as HTMLDivElement | null;
@@ -32,125 +32,127 @@ async function getWorld() {
   return await worldPromise;
 }
 
-function startDomHandPointer(world: World) {
-  stopDomPointer?.();
+// DOM overlay input mapping was superseded by world-space UI.
 
-  const q = new Quaternion();
-  const origin = new Vector3();
-  const dir = new Vector3();
-  const point = new Vector3();
+function startWorldSpaceUi(world: World) {
+  stopWorldUi?.();
+
+  const rootEl = document.getElementById("root");
+  if (rootEl) rootEl.style.display = "none";
+
+  // Root panel (uikit units are pixels-ish; world scale is handled by uikit panel system)
+  const uiRoot = new Container({
+    width: 420,
+    height: 120,
+    padding: 16,
+    gap: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  });
+
+  // Place panel in world space in front of user.
+  uiRoot.position.set(0, 1.35, -1.1);
+
+  let open = false;
+
+  const render = () => {
+    uiRoot.clear();
+
+    const launcher = new Container({
+      width: 64,
+      height: 64,
+      borderRadius: 999,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.25)",
+      alignItems: "center",
+      justifyContent: "center",
+      // hover/active styling
+      hover: { backgroundColor: "rgba(255,255,255,0.08)" },
+      active: { backgroundColor: "rgba(255,255,255,0.12)" },
+    });
+    launcher.addEventListener("click", () => {
+      open = !open;
+      render();
+    });
+
+    launcher.add(
+      new UiImage({
+        src: "/icons/tab-cards.svg",
+        width: 26,
+        height: 26,
+        opacity: 0.95,
+        color: "white",
+      }),
+    );
+    uiRoot.add(launcher);
+
+    if (!open) return;
+
+    const cardsBtn = new Container({
+      width: 140,
+      height: 56,
+      borderRadius: 999,
+      backgroundColor: "rgba(0,0,0,0.35)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.12)",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      hover: { backgroundColor: "rgba(255,255,255,0.08)" },
+      active: { backgroundColor: "rgba(255,255,255,0.12)" },
+    });
+    cardsBtn.add(new UiImage({ src: "/icons/tab-cards.svg", width: 20, height: 20, opacity: 0.95, color: "white" }));
+    cardsBtn.add(new Text({ text: "Cards", fontSize: 18, color: "white" }));
+    uiRoot.add(cardsBtn);
+
+    const badgesBtn = new Container({
+      width: 140,
+      height: 56,
+      borderRadius: 999,
+      backgroundColor: "rgba(0,0,0,0.35)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.12)",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      hover: { backgroundColor: "rgba(255,255,255,0.08)" },
+      active: { backgroundColor: "rgba(255,255,255,0.12)" },
+    });
+    badgesBtn.add(new UiImage({ src: "/icons/tab-badges.png", width: 22, height: 22, opacity: 0.95 }));
+    badgesBtn.add(new Text({ text: "Badges", fontSize: 18, color: "white" }));
+    uiRoot.add(badgesBtn);
+  };
+
+  render();
+  world.getPersistentRoot().add(uiRoot);
 
   let raf = 0;
-  let pinching = false;
-  let lastX = 0;
-  let lastY = 0;
-  let lastMoveAt = 0;
-
-  const onSelectStart = () => {
-    pinching = true;
-    const target = document.elementFromPoint(lastX, lastY) as Element | null;
-    target?.dispatchEvent(
-      new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: lastX, clientY: lastY, button: 0 }),
-    );
-  };
-  const onSelectEnd = () => {
-    pinching = false;
-    const target = document.elementFromPoint(lastX, lastY) as Element | null;
-    target?.dispatchEvent(
-      new MouseEvent("mouseup", { bubbles: true, cancelable: true, clientX: lastX, clientY: lastY, button: 0 }),
-    );
-    target?.dispatchEvent(
-      new MouseEvent("click", { bubbles: true, cancelable: true, clientX: lastX, clientY: lastY, button: 0 }),
-    );
-  };
-
-  const attachSession = () => {
-    const s = world.session;
-    if (!s) return false;
-    s.addEventListener("selectstart", onSelectStart);
-    s.addEventListener("selectend", onSelectEnd);
-    return true;
-  };
-
-  // Might be set shortly after launchXR; poll until it exists.
-  const ensureListeners = () => {
-    if (attachSession()) return;
-    const t = window.setInterval(() => {
-      if (attachSession()) window.clearInterval(t);
-    }, 200);
-  };
-  ensureListeners();
-
-  const tick = () => {
+  let prev = 0;
+  const tick = (t: number) => {
     raf = requestAnimationFrame(tick);
-
-    const s = world.session;
-    if (!s) return;
-    const refSpace = world.renderer.xr.getReferenceSpace();
-    if (!refSpace) return;
-
-    const src =
-      world.input.getPrimaryInputSource("right") ??
-      world.input.getPrimaryInputSource("left") ??
-      s.inputSources?.[0];
-    if (!src) return;
-
-    const frame = world.renderer.xr.getFrame();
-    if (!frame) return;
-
-    const pose = frame.getPose(src.targetRaySpace, refSpace);
-    if (!pose) return;
-
-    const t = pose.transform;
-    origin.set(t.position.x, t.position.y, t.position.z);
-    q.set(t.orientation.x, t.orientation.y, t.orientation.z, t.orientation.w);
-    dir.set(0, 0, -1).applyQuaternion(q).normalize();
-    point.copy(origin).addScaledVector(dir, 1.0); // 1m along ray
-
-    // Project into screen space using current XR camera.
-    point.project(world.camera);
-    const x = Math.round(((point.x + 1) / 2) * window.innerWidth);
-    const y = Math.round(((1 - (point.y + 1) / 2)) * window.innerHeight);
-
-    // clamp
-    const cx = Math.max(0, Math.min(window.innerWidth - 1, x));
-    const cy = Math.max(0, Math.min(window.innerHeight - 1, y));
-
-    const now = performance.now();
-    const prevX = lastX;
-    const prevY = lastY;
-    const moved = cx !== prevX || cy !== prevY;
-    lastX = cx;
-    lastY = cy;
-
-    if (moved) {
-      lastMoveAt = now;
-      const target = document.elementFromPoint(lastX, lastY) as Element | null;
-      target?.dispatchEvent(
-        new MouseEvent("mousemove", { bubbles: true, cancelable: false, clientX: lastX, clientY: lastY }),
-      );
-    }
-
-    // Scroll with pinch+drag (vertical delta -> wheel)
-    if (pinching && moved) {
-      const dy = lastY - prevY;
-      // Approx: if motion is fast, amplify.
-      const speed = Math.min(3, Math.max(1, (now - lastMoveAt) / 16));
-      const target = document.elementFromPoint(lastX, lastY) as Element | null;
-      target?.dispatchEvent(
-        new WheelEvent("wheel", { bubbles: true, cancelable: true, clientX: lastX, clientY: lastY, deltaY: dy * speed }),
-      );
-    }
+    const delta = prev ? t - prev : 16;
+    prev = t;
+    uiRoot.update(delta);
   };
-
   raf = requestAnimationFrame(tick);
 
-  stopDomPointer = () => {
+  stopWorldUi = () => {
     cancelAnimationFrame(raf);
-    const s = world.session;
-    s?.removeEventListener("selectstart", onSelectStart);
-    s?.removeEventListener("selectend", onSelectEnd);
-    pinching = false;
+    try {
+      uiRoot.dispose();
+    } catch {
+      // ignore
+    }
+    uiRoot.removeFromParent();
+    if (rootEl) rootEl.style.display = "";
   };
 }
 
@@ -161,20 +163,20 @@ export async function enterAR() {
   const w = await getWorld();
   w.launchXR({
     sessionMode: SessionMode.ImmersiveAR,
-    referenceSpace: { type: ReferenceSpaceType.LocalFloor },
     features: {
       handTracking: { required: false },
       layers: true,
     },
   });
-  startDomHandPointer(w);
+  // World-space UI (default closed, only launcher visible)
+  startWorldSpaceUi(w);
 }
 
 export async function exitAR() {
   if (!worldPromise) return;
   const w = await worldPromise;
-  stopDomPointer?.();
-  stopDomPointer = null;
+  stopWorldUi?.();
+  stopWorldUi = null;
   w.exitXR();
 }
 
