@@ -13,7 +13,7 @@ type Props = {
 };
 
 type UnlockUi = {
-  nome: string;
+  label: string;
   colore: string;
 };
 
@@ -122,7 +122,7 @@ export function BadgeScanner({
                 if (!last || last.id !== attr.id || now - last.at > 2000) {
                   lastHitRef.current = { id: attr.id, at: now };
                   onBadgeUnlocked(attr.id);
-                  setUnlockUi({ nome: attr.badge.nome, colore: attr.badge.colore });
+                  setUnlockUi({ label: `${attr.nome} - unlocked`, colore: attr.badge.colore });
                   seenOnceRef.current = true;
                   window.setTimeout(() => {
                     setUnlockUi(null);
@@ -223,10 +223,7 @@ export function BadgeScanner({
             <div className="mx-auto mb-2 grid h-12 w-12 place-items-center rounded-2xl ring-1 ring-white/10" style={{ backgroundColor: unlockUi.colore + "22" }}>
               <Sparkles className="h-5 w-5" style={{ color: unlockUi.colore }} />
             </div>
-            <div className="text-sm font-semibold text-zinc-100">Badge sbloccato!</div>
-            <div className="mt-1 text-base font-semibold" style={{ color: unlockUi.colore }}>
-              {unlockUi.nome}
-            </div>
+            <div className="text-sm font-semibold text-zinc-100">{unlockUi.label}</div>
           </div>
         </div>
       ) : null}

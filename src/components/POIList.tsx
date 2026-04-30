@@ -232,11 +232,45 @@ export function POIList({
                 >
                   <div className="flex min-w-0 items-center gap-2">
                   <span
-                    className="inline-flex size-10 shrink-0 items-center justify-center rounded-full"
+                    className="inline-flex size-10 shrink-0 items-center justify-center rounded-full ring-1 ring-white/70"
                     style={{ backgroundColor: CIRCLE_BG }}
                     aria-hidden
                   >
-                    <Sparkles className="size-[17px] text-white" strokeWidth={2.25} />
+                    {p.categoria === "attrazione" ? (
+                      <img
+                        src="/icons/ride.svg"
+                        alt=""
+                        className="size-[26px]"
+                        style={{ filter: "invert(1)" }}
+                        draggable={false}
+                      />
+                    ) : p.categoria === "ristoro" ? (
+                      <img
+                        src="/icons/food.svg"
+                        alt=""
+                        className="size-[24px]"
+                        style={{ filter: "invert(1)" }}
+                        draggable={false}
+                      />
+                    ) : p.categoria === "wc" ? (
+                      <img
+                        src="/icons/wc.svg"
+                        alt=""
+                        className="size-[24px]"
+                        style={{ filter: "invert(1)" }}
+                        draggable={false}
+                      />
+                    ) : p.categoria === "asciugatura" ? (
+                      <img
+                        src="/icons/dryer.svg"
+                        alt=""
+                        className="size-[24px]"
+                        style={{ filter: "invert(1)" }}
+                        draggable={false}
+                      />
+                    ) : (
+                      <Sparkles className="size-[17px] text-white" strokeWidth={2.25} />
+                    )}
                   </span>
 
                   <div className="min-w-0 flex-1 text-left">

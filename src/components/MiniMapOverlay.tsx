@@ -44,15 +44,23 @@ export function MiniMapOverlay({ open, posUtente, destinazione, onClose }: Props
           </div>
         ) : (
           <div className="mb-3 w-[200px] text-center text-sm text-zinc-200">
-            Navigazione disponibile solo all&apos;interno del parco.
+            This functionality will be available soon.
           </div>
         )}
 
-        <div className="relative h-[200px] w-[200px] overflow-hidden rounded-full bg-zinc-950 ring-1 ring-white/10">
+        <div
+          className="relative h-[200px] w-[200px] overflow-hidden rounded-full bg-zinc-950 ring-1 ring-white/10"
+          style={{
+            WebkitMaskImage:
+              "radial-gradient(circle at center, rgba(0,0,0,1) 68%, rgba(0,0,0,0) 100%)",
+            maskImage:
+              "radial-gradient(circle at center, rgba(0,0,0,1) 68%, rgba(0,0,0,0) 100%)",
+          }}
+        >
           <img
-            src="/map-placeholder.png"
+            src="/map-europapark.png"
             alt="Mappa"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover opacity-80"
             draggable={false}
           />
         </div>
