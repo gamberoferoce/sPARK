@@ -11,6 +11,7 @@ type Props = {
   onNaviga: (poi: Poi) => void;
   calcolaDistanzaM: (poiPos: Poi["posizione"]) => number;
   fullBleed?: boolean;
+  parcoClosed?: boolean;
 };
 
 type Tab = "attrazione" | "ristoro" | "servizi";
@@ -48,6 +49,7 @@ export function POIList({
   onNaviga,
   calcolaDistanzaM,
   fullBleed = true,
+  parcoClosed = false,
 }: Props) {
   const [tab, setTab] = useState<Tab>("attrazione");
   const swipeRef = useRef<{ x: number; y: number; pointerType: string } | null>(null);
@@ -194,7 +196,8 @@ export function POIList({
           const coda = Number(p.coda_minuti);
           const hasCoda = Number.isFinite(coda);
           const bellOn = bellById[p.id] === true;
-          const showCoda = hasCoda && tab !== "servizi";
+          const isClosed = parcoClosed || coda === -1;
+          const showWait = tab === "attrazione" && hasCoda && coda >= 0 && parcoClosed !== true;
 
           return (
             <li
@@ -241,7 +244,13 @@ export function POIList({
                   </div>
 
                   <div className="shrink-0 pl-0.5 translate-x-1.5">
-                    {showCoda ? (
+                    {isClosed ? (
+                      <span
+                        className="inline-flex min-w-[3rem] items-center justify-center rounded-full px-2 py-0.5 text-[12px] font-normal leading-tight tracking-tight text-zinc-200 ring-1 ring-white/10 bg-zinc-800/70"
+                      >
+                        Closed
+                      </span>
+                    ) : showWait ? (
                       <span
                         className={cn(
                           "inline-flex min-w-[3rem] items-center justify-center rounded-full px-2 py-0.5 text-[12px] font-normal tabular-nums leading-tight tracking-tight",

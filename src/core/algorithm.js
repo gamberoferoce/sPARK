@@ -32,7 +32,9 @@ export function calcolaDistanza(posUtente, poiPosizione) {
 }
 
 export function valutaNotificaAttrazione(poi) {
-  return poi?.notifica_attiva === true && Number(poi?.coda_minuti) < ATTRAZIONI.soglia_coda_assoluta;
+  const coda = Number(poi?.coda_minuti);
+  if (coda === -1) return false;
+  return poi?.notifica_attiva === true && coda < ATTRAZIONI.soglia_coda_assoluta;
 }
 
 export function valutaTriggerCaffe(tutteLeAttrazioni) {

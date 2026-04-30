@@ -7,6 +7,7 @@ import { MiniMapOverlay } from "@/components/MiniMapOverlay";
 import { BadgeScreen } from "@/components/BadgeScreen";
 import { calcolaDistanza, valutaTriggerAsciugatura } from "@/core/algorithm.js";
 import { valutaTuttiIPoi } from "@/core/notifications.js";
+import { PARCO } from "@/core/config.js";
 import type { Poi } from "@/types/poi";
 
 function LauncherButton({
@@ -192,12 +193,53 @@ function App() {
   );
   const [posUtente, setPosUtente] = useState<Poi["posizione"] | null>(null);
 
-  const [queueTimesParkId, setQueueTimesParkId] = useState<number | null>(null);
-  const lastQueueTimesSuccessRef = useRef<number>(0);
+  const [parcoClosed, setParcoClosed] = useState<boolean>(false);
+
+  function parseYmd(ymd: string) {
+    const m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    const y = Number(m[1]);
+    const mo = Number(m[2]);
+    const d = Number(m[3]);
+    if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return null;
+    return new Date(y, mo - 1, d);
+  }
+
+  function parseHm(hm: string) {
+    const m = String(hm).match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    const hh = Number(m[1]);
+    const mm = Number(m[2]);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return hh * 60 + mm;
+  }
+
+  function isParcoOpenNow(now = new Date()) {
+    const start = parseYmd(PARCO.stagione.inizio);
+    const end = parseYmd(PARCO.stagione.fine);
+    if (!start || !end) return true;
+
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (today < start || today > end) return false;
+
+    const openMin = parseHm(PARCO.orario_apertura) ?? 0;
+    const closeMin = parseHm(PARCO.orario_chiusura_default) ?? 24 * 60;
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    return nowMin >= openMin && nowMin < closeMin;
+  }
 
   useEffect(() => {
     poisRef.current = pois;
   }, [pois]);
+
+  // Park open/closed logic (season + opening hours)
+  useEffect(() => {
+    const tick = () => setParcoClosed(isParcoOpenNow(new Date()) === false);
+    tick();
+    const id = window.setInterval(tick, 60 * 1000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const attrazioniConBadge = useMemo(
     () => pois.filter((p) => p?.categoria === "attrazione" && !!p.badge),
@@ -276,85 +318,19 @@ function App() {
     };
   }, []);
 
-  // Queue-Times.com integration (Gardaland live wait times)
+  // Queue-Times.com integration (Europa-Park live wait times)
   useEffect(() => {
-    if (!pois || pois.length === 0) return;
-    if (queueTimesParkId != null) return;
-
-    let cancelled = false;
-    const ctrl = new AbortController();
-
     const normalizeName = (s: string) =>
       s
         .toLowerCase()
         .trim()
-        // make matching tolerant to punctuation/hyphens
-        .replace(/[^a-z0-9]+/g, " ")
-        .replace(/\s+/g, " ");
-
-    const run = async () => {
-      try {
-        const base = import.meta.env.DEV
-          ? "/queue-times"
-          : "https://queue-times-proxy.giuliafanasca.workers.dev/api/queue-times";
-        const res = await fetch(`${base}/parks.json`, { signal: ctrl.signal });
-        if (!res.ok) return;
-        const json = (await res.json()) as unknown;
-        if (cancelled) return;
-
-        // parks.json structure is an array of groups (companies) with parks
-        // We search by park name inside nested arrays.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const groups = Array.isArray(json) ? (json as any[]) : [];
-        let foundId: number | null = null;
-        for (const g of groups) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const parks = Array.isArray((g as any)?.parks) ? ((g as any).parks as any[]) : [];
-          for (const p of parks) {
-            const name = typeof p?.name === "string" ? (p.name as string) : "";
-            const id = typeof p?.id === "number" ? (p.id as number) : null;
-            if (!name || id == null) continue;
-            if (normalizeName(name) === normalizeName("Europa-Park")) {
-              foundId = id;
-              break;
-            }
-          }
-          if (foundId != null) break;
-        }
-
-        if (foundId != null) {
-          if (import.meta.env.DEV) console.log("[QUEUE-TIMES PARK ID]:", foundId);
-          setQueueTimesParkId(foundId);
-        }
-      } catch {
-        // ignore (network/CORS/etc.)
-      }
-    };
-
-    run();
-    return () => {
-      cancelled = true;
-      ctrl.abort();
-    };
-  }, [pois, queueTimesParkId]);
-
-  useEffect(() => {
-    if (queueTimesParkId == null) return;
-
-    const normalizeName = (s: string) =>
-      s
-        .toLowerCase()
-        .trim()
-        // make matching tolerant to punctuation/hyphens
         .replace(/[^a-z0-9]+/g, " ")
         .replace(/\s+/g, " ");
 
     const tick = async () => {
       try {
-        const base = import.meta.env.DEV
-          ? "/queue-times"
-          : "https://queue-times-proxy.giuliafanasca.workers.dev/api/queue-times";
-        const res = await fetch(`${base}/parks/${queueTimesParkId}/queue_times.json`);
+        const base = import.meta.env.DEV ? "/queue-times" : "/api/queue-times";
+        const res = await fetch(`${base}/parks/${PARCO.queue_times_park_id}/queue_times.json`);
         if (!res.ok) return;
         const data = (await res.json()) as unknown;
 
@@ -369,12 +345,7 @@ function App() {
         }
         if (rides.length === 0) return;
 
-        // If everything is closed, treat park as closed and keep previous values.
-        const allClosed = rides.every((r) => r && r.is_open === false);
-        if (allClosed) return;
-
         const currentPois = poisRef.current;
-        // Build name -> index map from current POIs for fast matching
         const poiByNameKey = new Map<string, string>();
         for (const p of currentPois) {
           if (!p?.id || typeof p.nome !== "string") continue;
@@ -382,49 +353,40 @@ function App() {
         }
 
         const updates = new Map<string, number>();
-        const noMatches: string[] = [];
-
         for (const r of rides) {
           const name = typeof r?.name === "string" ? (r.name as string) : "";
-          const wait = typeof r?.wait_time === "number" ? (r.wait_time as number) : null;
-          const open = r?.is_open === true;
           if (!name) continue;
-          const key = normalizeName(name);
-          const poiId = poiByNameKey.get(key);
-          if (!poiId) {
-            noMatches.push(name);
+          const poiId = poiByNameKey.get(normalizeName(name));
+          if (!poiId) continue;
+
+          if (r?.is_open === false) {
+            updates.set(poiId, -1);
             continue;
           }
-          if (!open) continue;
+          if (r?.is_open !== true) continue;
+
+          const wait = typeof r?.wait_time === "number" ? (r.wait_time as number) : null;
           if (wait == null || !Number.isFinite(wait)) continue;
           updates.set(poiId, Math.max(0, Math.round(wait)));
         }
 
-        if (noMatches.length) {
-          for (const n of noMatches) {
-            if (import.meta.env.DEV) console.log("[QUEUE-TIMES NO MATCH]:", n);
-          }
-        }
-
         if (updates.size === 0) return;
-
-        lastQueueTimesSuccessRef.current = Date.now();
         setPois((prev) =>
           prev.map((p) => {
-            const nextWait = updates.get(p.id);
-            if (nextWait == null) return p;
-            return { ...p, coda_minuti: nextWait };
+            const next = updates.get(p.id);
+            if (next == null) return p;
+            return { ...p, coda_minuti: next };
           }),
         );
       } catch {
-        // keep previous values
+        // ignore
       }
     };
 
     tick();
     const id = window.setInterval(tick, 5 * 60 * 1000);
     return () => window.clearInterval(id);
-  }, [queueTimesParkId]);
+  }, []);
 
   // Ottiene e aggiorna posUtente via geolocalizzazione
   useEffect(() => {
@@ -488,16 +450,11 @@ function App() {
     }
 
     const id = window.setInterval(() => {
-      // If Queue-Times updates are active, avoid clobbering ride wait times.
-      const hasRecentLive = Date.now() - lastQueueTimesSuccessRef.current < 10 * 60 * 1000;
       setPois((prev) =>
         prev.map((p) => {
           if (!p || !p.id) return p;
-          if (p.categoria === "attrazione") {
-            return hasRecentLive ? p : { ...p, coda_minuti: randomInt(5, 80) };
-          }
           if (p.categoria === "ristoro") return { ...p, coda_minuti: randomInt(0, 25) };
-          return p; // wc invariati
+          return p; // non toccare attrazioni, wc, asciugatura
         }),
       );
     }, 90 * 1000);
@@ -731,6 +688,7 @@ function App() {
                 pois={poisFiltrati}
                 posUtente={posUtente ?? posFallback}
                 bellById={bellById}
+                parcoClosed={parcoClosed}
                 onToggleBell={(id) => {
                   setBellById((prev) => ({ ...prev, [id]: !(prev[id] === true) }));
                   setPois((prev) =>
