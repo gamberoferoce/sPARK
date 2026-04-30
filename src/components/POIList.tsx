@@ -197,7 +197,11 @@ export function POIList({
           const hasCoda = Number.isFinite(coda);
           const bellOn = bellById[p.id] === true;
           const isClosed = parcoClosed || coda === -1;
-          const showWait = tab === "attrazione" && hasCoda && coda >= 0 && parcoClosed !== true;
+          const showWait =
+            (tab === "attrazione" || (tab === "servizi" && p.categoria === "wc")) &&
+            hasCoda &&
+            coda >= 0 &&
+            parcoClosed !== true;
 
           return (
             <li

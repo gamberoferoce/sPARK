@@ -327,9 +327,17 @@ function App() {
         .replace(/[^a-z0-9]+/g, " ")
         .replace(/\s+/g, " ");
 
+    const normalizeRideName = (s: string) => {
+      // Queue-Times sometimes includes helper prefixes (e.g. "VirtualLine: ...")
+      const cleaned = String(s).replace(/^virtual\s*line:\s*/i, "").replace(/^virtualline:\s*/i, "");
+      return normalizeName(cleaned);
+    };
+
     const tick = async () => {
       try {
-        const base = import.meta.env.DEV ? "/queue-times" : "/api/queue-times";
+        const base = import.meta.env.DEV
+          ? "/queue-times"
+          : "https://queue-times-proxy.giuliafanasca.workers.dev/api/queue-times";
         const res = await fetch(`${base}/parks/${PARCO.queue_times_park_id}/queue_times.json`);
         if (!res.ok) return;
         const data = (await res.json()) as unknown;
@@ -356,7 +364,7 @@ function App() {
         for (const r of rides) {
           const name = typeof r?.name === "string" ? (r.name as string) : "";
           if (!name) continue;
-          const poiId = poiByNameKey.get(normalizeName(name));
+          const poiId = poiByNameKey.get(normalizeRideName(name));
           if (!poiId) continue;
 
           if (r?.is_open === false) {
@@ -454,7 +462,8 @@ function App() {
         prev.map((p) => {
           if (!p || !p.id) return p;
           if (p.categoria === "ristoro") return { ...p, coda_minuti: randomInt(0, 25) };
-          return p; // non toccare attrazioni, wc, asciugatura
+          if (p.categoria === "wc") return { ...p, coda_minuti: randomInt(0, 5) };
+          return p; // non toccare attrazioni, asciugatura
         }),
       );
     }, 90 * 1000);
