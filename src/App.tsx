@@ -617,7 +617,7 @@ function App() {
     const trigger = notificaAttiva.poi.trigger;
     if (Array.isArray(trigger) && trigger.includes("caffe"))
       return "All rides are crowded — coffee break?";
-    if (Array.isArray(trigger) && trigger.includes("gelato")) return "Sei vicino a un chiosco gelato!";
+    if (Array.isArray(trigger) && trigger.includes("merenda")) return "Snack break nearby?";
     return "Suggerimento ristoro.";
   }, [notificaAttiva]);
 

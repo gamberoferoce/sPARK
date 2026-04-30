@@ -1,6 +1,6 @@
 import {
   valutaTriggerCaffe,
-  valutaTriggerGelato,
+  valutaTriggerMerenda,
   valutaTriggerPostPranzo,
   valutaTriggerUltimoGiro,
 } from "./algorithm.js";
@@ -14,7 +14,7 @@ import { ATTRAZIONI, RISTORI } from "./config.js";
 export const stato = {
   ristori: {
     caffeNotificato: false,
-    gelato: { giorno: null, notificato: false },
+    merenda: { giorno: null, notificato: false },
     ultimaNotificaManualePerPoi: {},
     postPranzo: { giorno: null, notificato: false },
     ultimoGiro: { giorno: null, notificatoPerPoi: {} },
@@ -29,11 +29,11 @@ function todayYmd(nowMs) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function ensureResetGelatoGiornaliero(nowMs) {
+function ensureResetMerendaGiornaliero(nowMs) {
   const today = todayYmd(nowMs);
-  if (stato.ristori.gelato.giorno === today) return;
-  stato.ristori.gelato.giorno = today;
-  stato.ristori.gelato.notificato = false;
+  if (stato.ristori.merenda.giorno === today) return;
+  stato.ristori.merenda.giorno = today;
+  stato.ristori.merenda.notificato = false;
 }
 
 function ensureResetPostPranzoGiornaliero(nowMs) {
@@ -131,14 +131,14 @@ export function valutaTuttiIPoi(pois, posUtente, onNotificaAttrazione, onNotific
     }
   }
 
-  // Caso 2: trigger gelato (una volta al giorno)
-  ensureResetGelatoGiornaliero(nowMs);
-  if (stato.ristori.gelato.notificato === false) {
+  // Caso 2: trigger merenda (una volta al giorno)
+  ensureResetMerendaGiornaliero(nowMs);
+  if (stato.ristori.merenda.notificato === false) {
     for (const poi of ristori) {
       if (!poi || !poi.id) continue;
-      if (!(Array.isArray(poi.trigger) && poi.trigger.includes("gelato"))) continue;
-      if (valutaTriggerGelato(poi, posUtente) !== true) continue;
-      stato.ristori.gelato.notificato = true;
+      if (!(Array.isArray(poi.trigger) && poi.trigger.includes("merenda"))) continue;
+      if (valutaTriggerMerenda(poi, posUtente) !== true) continue;
+      stato.ristori.merenda.notificato = true;
       if (typeof onNotificaRistoro === "function") onNotificaRistoro(poi);
       break;
     }

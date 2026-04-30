@@ -6,8 +6,8 @@ export const ATTRAZIONI = {
 
 export const RISTORI = {
   soglia_coda_minima_caffe: 10,
-  fascia_gelato: { inizio: 15, fine: 18 },
-  distanza_gelato: 150,
+  fascia_merenda: { inizio: 15, fine: 18 },
+  distanza_merenda: 150,
   cooldown_manuale_ms: 60 * 60 * 1000,
 };
 

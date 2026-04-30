@@ -47,13 +47,13 @@ export function valutaTriggerCaffe(tutteLeAttrazioni) {
   return min > RISTORI.soglia_coda_minima_caffe;
 }
 
-export function valutaTriggerGelato(poi, posUtente) {
+export function valutaTriggerMerenda(poi, posUtente) {
   const now = new Date();
   const ora = now.getHours();
-  if (ora < RISTORI.fascia_gelato.inizio || ora >= RISTORI.fascia_gelato.fine) return false;
+  if (ora < RISTORI.fascia_merenda.inizio || ora >= RISTORI.fascia_merenda.fine) return false;
   if (!poi?.posizione || !posUtente) return false;
   const distanza = calcolaDistanza(posUtente, poi.posizione);
-  return Number.isFinite(distanza) && distanza < RISTORI.distanza_gelato;
+  return Number.isFinite(distanza) && distanza < RISTORI.distanza_merenda;
 }
 
 function oraToMinuti(oraStr) {
