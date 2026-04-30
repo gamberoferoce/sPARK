@@ -194,6 +194,7 @@ function App() {
   const [posUtente, setPosUtente] = useState<Poi["posizione"] | null>(null);
 
   const [parcoClosed, setParcoClosed] = useState<boolean>(false);
+  const lastQueueTimesOkRef = useRef<number>(0);
 
   function parseYmd(ymd: string) {
     const m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -235,7 +236,11 @@ function App() {
 
   // Park open/closed logic (season + opening hours)
   useEffect(() => {
-    const tick = () => setParcoClosed(isParcoOpenNow(new Date()) === false);
+    const tick = () => {
+      // If Queue-Times is updating, treat it as source of truth for open/closed.
+      if (Date.now() - lastQueueTimesOkRef.current < 10 * 60 * 1000) return;
+      setParcoClosed(isParcoOpenNow(new Date()) === false);
+    };
     tick();
     const id = window.setInterval(tick, 60 * 1000);
     return () => window.clearInterval(id);
@@ -352,6 +357,11 @@ function App() {
           rides.push(...rs);
         }
         if (rides.length === 0) return;
+
+        // Queue-Times open/closed truth: if all rides are closed, treat park as closed.
+        lastQueueTimesOkRef.current = Date.now();
+        const allClosed = rides.every((r) => r && r.is_open === false);
+        setParcoClosed(allClosed);
 
         const currentPois = poisRef.current;
         const poiByNameKey = new Map<string, string>();
