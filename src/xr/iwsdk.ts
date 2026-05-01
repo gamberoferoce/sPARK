@@ -52,8 +52,8 @@ function startWorldSpaceDebugUi(world: World) {
     justifyContent: "center",
   });
 
-  // Big and unmistakable: 680px => ~0.68m at 0.001 scale.
-  uiRoot.scale.setScalar(0.001);
+  // Scale up aggressively for Quest testing (20x).
+  uiRoot.scale.setScalar(0.02);
   uiRoot.position.set(0, 1.45, -1.2);
   uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
   uiRoot.visible = true;
