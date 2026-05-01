@@ -141,6 +141,8 @@ function startWorldSpaceDesktopLikeUi(world: World) {
   const debug = flagParam("xrDbg");
   const dbgUiScale = parseFloatParam("xrUiScale", NaN);
   const dbgUiZ = parseFloatParam("xrUiZ", NaN);
+  const uiProbe = flagParam("xrUiProbe");
+  const uiBright = flagParam("xrUiBright");
 
   const rootEl = document.getElementById("root");
   const hideDom = () => {
@@ -156,9 +158,9 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     padding: 18,
     gap: 12,
     borderRadius: 28,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: uiBright ? "rgba(0,0,0,0.72)" : "rgba(0,0,0,0.45)",
+    borderWidth: uiProbe ? 3 : 1,
+    borderColor: uiProbe ? "rgba(255,60,60,0.95)" : "rgba(255,255,255,0.14)",
     flexDirection: "column",
     alignItems: "stretch",
     justifyContent: "flex-start",
@@ -220,9 +222,9 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     width: 900,
     height: 980,
     borderRadius: 22,
-    backgroundColor: "rgba(0,0,0,0.18)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: uiBright ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.18)",
+    borderWidth: uiProbe ? 2 : 1,
+    borderColor: uiProbe ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.08)",
     padding: 12,
     flexDirection: "column",
     gap: 10,
@@ -270,6 +272,44 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     titleRow.add(titleLeft);
     titleRow.add(tabs);
     uiRoot.add(titleRow);
+
+    if (uiProbe) {
+      const probe = new Container({
+        width: 876,
+        height: 120,
+        borderRadius: 18,
+        backgroundColor: "rgba(255,40,40,0.92)",
+        borderWidth: 2,
+        borderColor: "rgba(255,255,255,0.85)",
+        padding: 14,
+        flexDirection: "column",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        gap: 8,
+      });
+      probe.add(
+        new Text({
+          text: "REAL UIKIT PROBE",
+          fontSize: 28,
+          color: "white",
+        }),
+      );
+      probe.add(
+        new Text({
+          text: "If you can read this, the real UIKit layer is rendering (not WebGL-only spheres).",
+          fontSize: 16,
+          color: "rgba(255,255,255,0.95)",
+        }),
+      );
+      probe.add(
+        new Text({
+          text: "If you only saw spheres before: that was scene rendering checks. This is the actual UI stack.",
+          fontSize: 14,
+          color: "rgba(255,255,255,0.92)",
+        }),
+      );
+      content.add(probe);
+    }
 
     if (selected === "cards") {
       if (pois.length === 0) {
@@ -655,12 +695,29 @@ export async function enterAR() {
     const qs = new URLSearchParams(window.location.search);
     const xrPairs: Array<[string, string]> = [];
     qs.forEach((value, key) => {
-      if (key === "xrDbg" || key.startsWith("xrUi")) xrPairs.push([key, value]);
+      if (
+        key === "xrDbg" ||
+        key === "xrUiProbe" ||
+        key === "xrUiBright" ||
+        key.startsWith("xrUi")
+      ) {
+        xrPairs.push([key, value]);
+      }
     });
     if (xrPairs.length) {
-      const obj: Record<string, string> = {};
-      for (const [k, v] of xrPairs) obj[k] = v;
-      sessionStorage.setItem("xrFlags", JSON.stringify(obj));
+      let prev: Record<string, string> = {};
+      try {
+        const rawPrev = sessionStorage.getItem("xrFlags");
+        if (rawPrev) {
+          const parsed = JSON.parse(rawPrev) as unknown;
+          if (parsed && typeof parsed === "object" && parsed !== null) prev = parsed as Record<string, string>;
+        }
+      } catch {
+        // ignore
+      }
+      const merged = { ...prev };
+      for (const [k, v] of xrPairs) merged[k] = v;
+      sessionStorage.setItem("xrFlags", JSON.stringify(merged));
     }
   } catch {
     // ignore
