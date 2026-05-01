@@ -39,7 +39,19 @@ function startWorldSpaceUi(world: World) {
   stopWorldUi?.();
 
   const rootEl = document.getElementById("root");
-  if (rootEl) rootEl.style.display = "none";
+  // Don't hide the DOM immediately: if the XR permission prompt is up or XR fails,
+  // hiding the app makes it look "frozen". We'll hide only once we have a session.
+  let domHidden = false;
+  const hideDom = () => {
+    if (domHidden) return;
+    domHidden = true;
+    if (rootEl) rootEl.style.display = "none";
+  };
+  const showDom = () => {
+    if (!domHidden) return;
+    domHidden = false;
+    if (rootEl) rootEl.style.display = "";
+  };
 
   // Root panel (uikit uses pixel-like units; we scale to meters)
   const uiRoot = new Container({
@@ -202,7 +214,9 @@ function startWorldSpaceUi(world: World) {
     const action = (o?.userData?.action as typeof activeAction) ?? null;
 
     const localPoint = uiRoot.worldToLocal(hit.point.clone());
-    return { action, localX: localPoint.x };
+    // Convert to meters so gesture thresholds are stable even if UI scale changes.
+    const localX_m = localPoint.x * uiRoot.scale.x;
+    return { action, localX: localX_m };
   };
 
   const onSelectStart = () => {
@@ -262,9 +276,13 @@ function startWorldSpaceUi(world: World) {
   const ensureSessionHandlers = () => {
     const s = world.session;
     if (!s) return;
+    hideDom();
     s.addEventListener("selectstart", onSelectStart);
     s.addEventListener("selectend", onSelectEnd);
-    s.addEventListener("end", () => setVisible(false));
+    s.addEventListener("end", () => {
+      setVisible(false);
+      showDom();
+    });
   };
 
   const handlersTimer = window.setInterval(() => {
@@ -314,7 +332,7 @@ function startWorldSpaceUi(world: World) {
       // ignore
     }
     uiRoot.removeFromParent();
-    if (rootEl) rootEl.style.display = "";
+    showDom();
   };
 }
 
