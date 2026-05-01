@@ -166,6 +166,13 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     flexDirection: "column",
     alignItems: "stretch",
     justifyContent: "flex-start",
+    // Passthrough AR: real-world depth buffer fights UIKit; glyphs/images can disappear or anti-alias into dust.
+    depthTest: false,
+    depthWrite: false,
+    renderOrder: 1000,
+    // Inherit a real Inter cut (msdfonts has light|medium|semi-bold|bold; "normal" maps to a nearest file).
+    fontFamily: "inter",
+    fontWeight: "medium",
   });
 
   // Empirical Quest scale: ~20× prior default for readable headset size.
@@ -230,7 +237,8 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     padding: 12,
     flexDirection: "column",
     gap: 10,
-    overflow: "scroll",
+    // `overflow: scroll` adds strict clipping; on Quest it has flattened all labels/glyphs to invisibility.
+    overflow: "visible",
   });
 
   const mkTab = (kind: XRKind) => {
@@ -251,10 +259,12 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     btn.add(
       new UiImage({
         src: kind === "badge" ? "/icons/tab-badges.png" : "/icons/tab-cards.svg",
-        width: kind === "badge" ? 20 : 18,
-        height: kind === "badge" ? 20 : 18,
+        width: kind === "badge" ? 28 : 24,
+        height: kind === "badge" ? 28 : 24,
         opacity: 0.95,
         color: "white",
+        depthTest: false,
+        depthWrite: false,
       }),
     );
     btn.add(new Text({ text: kind === "badge" ? "Badges" : "Cards", fontSize: 16, color: "white" }));
@@ -368,7 +378,17 @@ function startWorldSpaceDesktopLikeUi(world: World) {
                   ? "/icons/dryer.svg"
                   : "/icons/tab-cards.svg";
 
-        iconWrap.add(new UiImage({ src: iconSrc, width: 22, height: 22, opacity: 0.95, color: "white" }));
+        iconWrap.add(
+          new UiImage({
+            src: iconSrc,
+            width: 32,
+            height: 32,
+            opacity: 0.95,
+            color: "white",
+            depthTest: false,
+            depthWrite: false,
+          }),
+        );
         left.add(iconWrap);
         left.add(new Text({ text: p.nome, fontSize: 16, color: "white" }));
 
@@ -445,7 +465,16 @@ function startWorldSpaceDesktopLikeUi(world: World) {
           alignItems: "center",
           justifyContent: "center",
         });
-        imgWrap.add(new UiImage({ src: stickerForRideId(p.id), width: 76, height: 76, opacity: unlockedNow ? 0.92 : 0.32 }));
+        imgWrap.add(
+          new UiImage({
+            src: stickerForRideId(p.id),
+            width: 76,
+            height: 76,
+            opacity: unlockedNow ? 0.92 : 0.32,
+            depthTest: false,
+            depthWrite: false,
+          }),
+        );
 
         const textCol = new Container({ flexDirection: "column", alignItems: "flex-start", justifyContent: "center", gap: 6 });
         textCol.add(new Text({ text: p.nome, fontSize: 16, color: "white" }));
