@@ -46,7 +46,10 @@ export async function enterAR() {
   // - Request an immersive-ar session that allows DOM overlay rendering.
   const xr = (navigator as any).xr as XRSystem;
   const initBase: XRSessionInit = {
-    optionalFeatures: ["dom-overlay", "hand-tracking", "layers"],
+    // If DOM overlay isn't actually granted, the browser may hide the entire page in immersive mode
+    // and you'll see "nothing". Make it REQUIRED so we fail fast with a visible error instead.
+    requiredFeatures: ["dom-overlay"],
+    optionalFeatures: ["hand-tracking", "layers"],
     // DOM overlay root must be an Element.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     domOverlay: { root: document.body } as any,
