@@ -58,6 +58,33 @@ function startWorldSpaceDebugUi(world: World) {
   uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
   uiRoot.visible = true;
 
+  const dot = new Container({
+    width: 22,
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,50,50,0.95)", // red by default
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+  });
+
+  const header = new Container({
+    width: 680,
+    height: 34,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  });
+  header.add(dot);
+  header.add(
+    new Text({
+      text: "Pinch debug",
+      fontSize: 16,
+      color: "rgba(255,255,255,0.85)",
+    }),
+  );
+  uiRoot.add(header);
+
   uiRoot.add(
     new Text({
       text: "XR OK",
@@ -82,6 +109,32 @@ function startWorldSpaceDebugUi(world: World) {
 
   world.getPersistentRoot().add(uiRoot);
 
+  const setDot = (state: "down" | "up") => {
+    dot.setProperties({
+      backgroundColor: state === "down" ? "rgba(35, 210, 120, 0.95)" : "rgba(255,50,50,0.95)",
+    });
+  };
+
+  const onSelectStart = () => setDot("down");
+  const onSelectEnd = () => setDot("up");
+
+  // Attach pinch/select handlers once the session exists.
+  const attachHandlers = () => {
+    const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
+    if (!s) return false;
+    setDot("up");
+    s.addEventListener("selectstart", onSelectStart);
+    s.addEventListener("selectend", onSelectEnd);
+    // Some runtimes fire `select` more reliably than `selectend` for hand pinch.
+    s.addEventListener("select", onSelectEnd as EventListener);
+    s.addEventListener("end", onSelectEnd);
+    return true;
+  };
+
+  const handlersTimer = window.setInterval(() => {
+    if (attachHandlers()) window.clearInterval(handlersTimer);
+  }, 200);
+
   let raf = 0;
   const tmp = new Vector3();
   let prev = 0;
@@ -97,6 +150,12 @@ function startWorldSpaceDebugUi(world: World) {
 
   stopWorldUi = () => {
     cancelAnimationFrame(raf);
+    window.clearInterval(handlersTimer);
+    const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
+    s?.removeEventListener("selectstart", onSelectStart);
+    s?.removeEventListener("selectend", onSelectEnd);
+    s?.removeEventListener("select", onSelectEnd as EventListener);
+    s?.removeEventListener("end", onSelectEnd);
     try {
       uiRoot.dispose();
     } catch {
