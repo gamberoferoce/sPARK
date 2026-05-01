@@ -261,8 +261,10 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     return btn;
   };
 
+  /** Mount chrome once on uiRoot; avoid uiRoot.clear() — full clears can leave UIKit in a no-draw state on device. */
+  let uiChromeMounted = false;
+
   const build = () => {
-    uiRoot.clear();
     titleRow.clear();
     tabs.clear();
     content.clear();
@@ -273,7 +275,11 @@ function startWorldSpaceDesktopLikeUi(world: World) {
 
     titleRow.add(titleLeft);
     titleRow.add(tabs);
-    uiRoot.add(titleRow);
+    if (!uiChromeMounted) {
+      uiRoot.add(titleRow);
+      uiRoot.add(content);
+      uiChromeMounted = true;
+    }
 
     if (uiProbe) {
       const probe = new Container({
@@ -456,8 +462,6 @@ function startWorldSpaceDesktopLikeUi(world: World) {
         content.add(item);
       }
     }
-
-    uiRoot.add(content);
   };
 
   const setDot = (state: "down" | "up") => {
