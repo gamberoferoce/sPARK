@@ -143,6 +143,8 @@ function startWorldSpaceDesktopLikeUi(world: World) {
   const dbgUiZ = parseFloatParam("xrUiZ", NaN);
   const uiProbe = flagParam("xrUiProbe");
   const uiBright = flagParam("xrUiBright");
+  // Default: parent UI under the camera (reliable on Quest). Opt out with `?xrWorldUi=1`.
+  const followCam = !flagParam("xrWorldUi");
 
   const rootEl = document.getElementById("root");
   const hideDom = () => {
@@ -168,7 +170,7 @@ function startWorldSpaceDesktopLikeUi(world: World) {
 
   // Empirical Quest scale: big enough, not face-locked.
   uiRoot.scale.setScalar(Number.isFinite(dbgUiScale) ? dbgUiScale : 0.0016);
-  uiRoot.position.set(0, 1.42, Number.isFinite(dbgUiZ) ? dbgUiZ : -1.25);
+  uiRoot.position.set(0, 0, Number.isFinite(dbgUiZ) ? dbgUiZ : -1.1);
   uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
   uiRoot.visible = true;
 
@@ -464,7 +466,14 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     });
   };
 
-  world.getPersistentRoot().add(uiRoot);
+  // Placement strategy:
+  // - followCam=true: parent UI under the XR camera at a fixed local offset (most reliable on Quest right now)
+  // - followCam=false: keep UI in world space on persistent root (older behavior)
+  if (followCam) {
+    world.camera.add(uiRoot);
+  } else {
+    world.getPersistentRoot().add(uiRoot);
+  }
   build();
 
   // Debug helpers (Quest-friendly): tiny spheres at multiple depths + HTML overlay stats.
@@ -482,7 +491,7 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     mk(0x33aaff, 0.35, 1.35, -3.0, 0.06); // far
   }
 
-  const overlayEl = debug ? ensureHtmlOverlay() : null;
+  const hudEl = ensureHtmlOverlay();
 
   // Load poi.json like desktop
   void fetch("/poi.json")
@@ -597,8 +606,10 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     raf = requestAnimationFrame(tick);
     const delta = prev ? t - prev : 16;
     prev = t;
-    // Face the user (but keep world-space position).
-    uiRoot.lookAt(world.camera.getWorldPosition(tmpPos));
+    if (!followCam) {
+      // World-space mode: billboard toward the camera.
+      uiRoot.lookAt(world.camera.getWorldPosition(tmpPos));
+    }
     if (pinchDown) {
       const { localX } = hitTest();
       const dx = localX - pinchStartX;
@@ -613,7 +624,7 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     uiRoot.update(delta);
 
     frames++;
-    if (debug && overlayEl && frames % 15 === 0) {
+    if (frames % 15 === 0) {
       // Quick ray diagnostics (doesn't depend on UIKit raycasting internals).
       const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
       const refSpace = world.renderer?.xr?.getReferenceSpace?.();
@@ -644,13 +655,19 @@ function startWorldSpaceDesktopLikeUi(world: World) {
         }
       }
 
-      overlayEl.textContent =
-        `XR dbg\n` +
+      const cam = world.camera;
+      const wx = uiRoot.getWorldPosition(new Vector3());
+      hudEl.textContent =
+        `XR HUD\n` +
+        `followCam: ${followCam ? "yes" : "no"}\n` +
         `session: ${s ? "yes" : "no"} | rayPose: ${rayOk ? "yes" : "no"}\n` +
-        `hits(uiRoot): ${hitsUi} | hits(debug sphere): ${hitsDbg}\n` +
+        (debug
+          ? `hits(uiRoot): ${hitsUi} | hits(debug sphere): ${hitsDbg}\n`
+          : "") +
         `pois: ${pois.length}\n` +
-        `ui.scale: ${uiRoot.scale.x.toFixed(6)} ui.z: ${uiRoot.position.z.toFixed(3)}\n` +
-        `tips: add ?xrDbg&xrUiScale=0.004&xrUiZ=-0.9`;
+        `ui.scale: ${uiRoot.scale.x.toFixed(6)} ui.localZ: ${uiRoot.position.z.toFixed(3)}\n` +
+        `cam.pos: ${cam.position.x.toFixed(2)},${cam.position.y.toFixed(2)},${cam.position.z.toFixed(2)} | ui.world: ${wx.x.toFixed(2)},${wx.y.toFixed(2)},${wx.z.toFixed(2)}\n` +
+        `tips: ?xrUiProbe&xrUiBright&xrUiScale=0.004&xrUiZ=-0.75 (first load once to store flags)`;
     }
   };
   raf = requestAnimationFrame(tick);
@@ -695,12 +712,7 @@ export async function enterAR() {
     const qs = new URLSearchParams(window.location.search);
     const xrPairs: Array<[string, string]> = [];
     qs.forEach((value, key) => {
-      if (
-        key === "xrDbg" ||
-        key === "xrUiProbe" ||
-        key === "xrUiBright" ||
-        key.startsWith("xrUi")
-      ) {
+      if (key === "xrDbg" || key.startsWith("xr")) {
         xrPairs.push([key, value]);
       }
     });
