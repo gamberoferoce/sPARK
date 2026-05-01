@@ -166,7 +166,6 @@ function startWorldSpaceUi(world: World) {
 
   let pinchDown = false;
   let pinchStartX = 0;
-  let lastPinchEndedAt = 0;
   let activeAction: null | "launcher" | "cards" | "badge" = null;
 
   const setVisible = (v: boolean) => {
@@ -174,8 +173,6 @@ function startWorldSpaceUi(world: World) {
     if (!v) launcherOpen = false;
     buildUi();
   };
-
-  const toggleVisible = () => setVisible(!uiRoot.visible);
 
   const hitTestAction = (): { action: typeof activeAction; localX: number } => {
     // Use right hand if present, else left.
@@ -232,13 +229,12 @@ function startWorldSpaceUi(world: World) {
   };
 
   const onSelectEnd = () => {
-    const now = performance.now();
     const wasHidden = !uiRoot.visible;
 
     if (wasHidden) {
-      // double pinch toggles visibility when nothing is visible
-      if (now - lastPinchEndedAt < 600) toggleVisible();
-      lastPinchEndedAt = now;
+      // First pinch shows the launcher/UI immediately.
+      // (Pinch is surfaced as WebXR `select*` out of the box on Quest hands.)
+      setVisible(true);
       pinchDown = false;
       return;
     }
@@ -273,7 +269,6 @@ function startWorldSpaceUi(world: World) {
 
     activeAction = null;
     pinchDown = false;
-    lastPinchEndedAt = now;
   };
 
   const ensureSessionHandlers = () => {
