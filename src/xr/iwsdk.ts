@@ -168,8 +168,8 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     justifyContent: "flex-start",
   });
 
-  // Empirical Quest scale: big enough, not face-locked.
-  uiRoot.scale.setScalar(Number.isFinite(dbgUiScale) ? dbgUiScale : 0.0016);
+  // Empirical Quest scale: ~20× prior default for readable headset size.
+  uiRoot.scale.setScalar(Number.isFinite(dbgUiScale) ? dbgUiScale : 0.032);
   uiRoot.position.set(0, 0, Number.isFinite(dbgUiZ) ? dbgUiZ : -1.1);
   uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
   uiRoot.visible = true;
