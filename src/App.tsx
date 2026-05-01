@@ -191,6 +191,7 @@ function App() {
   const [mapDest, setMapDest] = useState<Poi | null>(null);
   const [badgeScreenOpen, setBadgeScreenOpen] = useState(false);
   const [xrOpen, setXrOpen] = useState(false);
+  const [xrError, setXrError] = useState<string | null>(null);
   const [launcherKind, setLauncherKind] = useState<"cards" | "badge">(() => {
     try {
       const v = localStorage.getItem("launcherKind");
@@ -735,6 +736,7 @@ function App() {
           type="button"
           className="rounded-full bg-black/40 px-4 py-2 text-xs font-semibold text-zinc-100 ring-1 ring-white/10 backdrop-blur hover:bg-white/10"
           onClick={async () => {
+            setXrError(null);
             try {
               if (xrOpen) {
                 await exitAR();
@@ -743,14 +745,20 @@ function App() {
               }
               await enterAR();
               setXrOpen(true);
-            } catch {
-              // ignore (unsupported / denied)
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : "XR failed to start.";
+              setXrError(msg);
             }
           }}
         >
           {xrOpen ? "Exit AR" : "Enter AR"}
         </button>
       </div>
+      {xrError ? (
+        <div className="fixed left-1/2 bottom-3 z-[96] w-[min(92vw,520px)] -translate-x-1/2 rounded-2xl bg-black/65 px-4 py-3 text-xs font-semibold text-zinc-100 ring-1 ring-white/15 backdrop-blur">
+          XR error: {xrError}
+        </div>
+      ) : null}
 
       {poiPanelOpen ? (
         <div

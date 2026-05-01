@@ -11,7 +11,9 @@ function ensureContainer() {
   el.id = "xr-scene";
   el.style.position = "fixed";
   el.style.inset = "0";
-  el.style.zIndex = "5";
+  // IMPORTANT (DOM overlay): keep the XR canvas behind the React DOM,
+  // otherwise the WebGL canvas can cover the whole UI and you'll see "nothing".
+  el.style.zIndex = "0";
   el.style.pointerEvents = "none"; // keep React DOM interactive (DOM overlay-style UX)
   document.body.appendChild(el);
   return el;
