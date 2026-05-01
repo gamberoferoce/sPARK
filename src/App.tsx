@@ -681,19 +681,21 @@ function App() {
 
   return (
     <main className="relative mx-auto w-full max-w-lg overflow-x-visible px-4 py-4">
-      {/* Background video */}
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-black">
-        <video
-          className="h-full w-full object-cover opacity-90"
-          src="/videos/bg.mp4"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-        />
-        <div className="absolute inset-0 bg-black/35" />
-      </div>
+      {/* Background video (hide in XR DOM overlay so only UI overlays passthrough) */}
+      {!xrOpen ? (
+        <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-black">
+          <video
+            className="h-full w-full object-cover opacity-90"
+            src="/videos/bg.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+          />
+          <div className="absolute inset-0 bg-black/35" />
+        </div>
+      ) : null}
       {/* Launcher unico: tap apre, press+drag orizzontale cambia scheda */}
       <LauncherButton
         kind={launcherKind}
