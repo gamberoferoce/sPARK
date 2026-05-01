@@ -135,6 +135,28 @@ type Poi = {
   coda_minuti?: number;
 };
 
+/** Layout units are uikit “px” inside the panel only; real-world size is exclusively `uiRoot.scale`. */
+const XR_PANEL = {
+  w: 900,
+  h: 1060,
+  header: 56,
+  rowCardMinH: 72,
+  rowBadgeMinH: 100,
+  padOuter: 18,
+  padInner: 12,
+  gapSection: 12,
+  gapRow: 12,
+  iconTab: 26,
+  iconRow: 34,
+  stickerImg: 72,
+  tabMinW: 128,
+  fsBrand: 26,
+  fsTag: 13,
+  fsTab: 15,
+  fsBody: 16,
+  fsSmall: 13,
+} as const;
+
 function startWorldSpaceDesktopLikeUi(world: World) {
   stopWorldUi?.();
 
@@ -155,10 +177,10 @@ function startWorldSpaceDesktopLikeUi(world: World) {
   };
 
   const uiRoot = new Container({
-    width: 900,
-    height: 1060,
-    padding: 18,
-    gap: 12,
+    width: XR_PANEL.w,
+    height: XR_PANEL.h,
+    padding: XR_PANEL.padOuter,
+    gap: XR_PANEL.gapSection,
     borderRadius: 28,
     backgroundColor: uiBright ? "rgba(0,0,0,0.72)" : "rgba(0,0,0,0.45)",
     borderWidth: uiProbe ? 3 : 1,
@@ -193,22 +215,26 @@ function startWorldSpaceDesktopLikeUi(world: World) {
   }
 
   const titleRow = new Container({
-    width: 900,
-    height: 56,
+    width: "100%",
+    height: XR_PANEL.header,
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: XR_PANEL.gapRow,
   });
   const titleLeft = new Container({
-    height: 56,
+    height: XR_PANEL.header,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-start",
     gap: 10,
   });
-  titleLeft.add(new Text({ text: "sPARK", fontSize: 26, color: "white" }));
-  titleLeft.add(new Text({ text: "XR", fontSize: 14, color: "rgba(255,255,255,0.72)" }));
+  titleLeft.add(new Text({ text: "sPARK", fontSize: XR_PANEL.fsBrand, color: "white" }));
+  titleLeft.add(new Text({ text: "XR", fontSize: XR_PANEL.fsTag, color: "rgba(255,255,255,0.72)" }));
 
   const dot = new Container({
     width: 16,
@@ -220,7 +246,8 @@ function startWorldSpaceDesktopLikeUi(world: World) {
   });
 
   const tabs = new Container({
-    height: 56,
+    height: XR_PANEL.header,
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
@@ -228,24 +255,27 @@ function startWorldSpaceDesktopLikeUi(world: World) {
   });
 
   const content = new Container({
-    width: 900,
-    height: 980,
+    width: "100%",
+    flexGrow: 1,
+    flexShrink: 1,
+    minHeight: 0,
     borderRadius: 22,
     backgroundColor: uiBright ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.18)",
     borderWidth: uiProbe ? 2 : 1,
     borderColor: uiProbe ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.08)",
-    padding: 12,
+    padding: XR_PANEL.padInner,
     flexDirection: "column",
     gap: 10,
-    // `overflow: scroll` adds strict clipping; on Quest it has flattened all labels/glyphs to invisibility.
-    overflow: "visible",
+    // Scroll only the list: `minHeight: 0` + `flexGrow` lets yoga give it a bounded box (flex scroll pattern).
+    overflow: "scroll",
   });
 
   const mkTab = (kind: XRKind) => {
     const isActive = selected === kind;
     const btn = new Container({
-      width: 156,
+      minWidth: XR_PANEL.tabMinW,
       height: 44,
+      flexShrink: 0,
       borderRadius: 999,
       backgroundColor: isActive ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.25)",
       borderWidth: 1,
@@ -259,15 +289,15 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     btn.add(
       new UiImage({
         src: kind === "badge" ? "/icons/tab-badges.png" : "/icons/tab-cards.svg",
-        width: kind === "badge" ? 28 : 24,
-        height: kind === "badge" ? 28 : 24,
+        width: XR_PANEL.iconTab,
+        height: XR_PANEL.iconTab,
         opacity: 0.95,
         color: "white",
         depthTest: false,
         depthWrite: false,
       }),
     );
-    btn.add(new Text({ text: kind === "badge" ? "Badges" : "Cards", fontSize: 16, color: "white" }));
+    btn.add(new Text({ text: kind === "badge" ? "Badges" : "Cards", fontSize: XR_PANEL.fsTab, color: "white" }));
     return btn;
   };
 
@@ -293,8 +323,8 @@ function startWorldSpaceDesktopLikeUi(world: World) {
 
     if (uiProbe) {
       const probe = new Container({
-        width: 876,
-        height: 120,
+        width: "100%",
+        minHeight: 120,
         borderRadius: 18,
         backgroundColor: "rgba(255,40,40,0.92)",
         borderWidth: 2,
@@ -308,21 +338,21 @@ function startWorldSpaceDesktopLikeUi(world: World) {
       probe.add(
         new Text({
           text: "REAL UIKIT PROBE",
-          fontSize: 28,
+          fontSize: XR_PANEL.fsBrand,
           color: "white",
         }),
       );
       probe.add(
         new Text({
           text: "If you can read this, the real UIKit layer is rendering (not WebGL-only spheres).",
-          fontSize: 16,
+          fontSize: XR_PANEL.fsBody,
           color: "rgba(255,255,255,0.95)",
         }),
       );
       probe.add(
         new Text({
           text: "If you only saw spheres before: that was scene rendering checks. This is the actual UI stack.",
-          fontSize: 14,
+          fontSize: XR_PANEL.fsSmall,
           color: "rgba(255,255,255,0.92)",
         }),
       );
@@ -334,30 +364,38 @@ function startWorldSpaceDesktopLikeUi(world: World) {
         content.add(
           new Text({
             text: "Loading POIs…",
-            fontSize: 16,
+            fontSize: XR_PANEL.fsBody,
             color: "rgba(255,255,255,0.85)",
           }),
         );
       }
       for (const p of pois) {
         const row = new Container({
-          width: 876,
-          height: 70,
+          width: "100%",
+          minHeight: XR_PANEL.rowCardMinH,
           borderRadius: 18,
           backgroundColor: "rgba(0,0,0,0.35)",
           borderWidth: 1,
           borderColor: "rgba(255,255,255,0.10)",
-          padding: 12,
+          padding: XR_PANEL.padInner,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 12,
+          gap: XR_PANEL.gapRow,
         });
-        const left = new Container({ flexDirection: "row", alignItems: "center", gap: 12 });
+        const left = new Container({
+          flexGrow: 1,
+          flexShrink: 1,
+          minWidth: 0,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: XR_PANEL.gapRow,
+        });
 
         const iconWrap = new Container({
-          width: 44,
-          height: 44,
+          width: XR_PANEL.iconRow + 10,
+          height: XR_PANEL.iconRow + 10,
+          flexShrink: 0,
           borderRadius: 999,
           backgroundColor: "rgba(0,0,0,0.55)",
           borderWidth: 1,
@@ -381,8 +419,8 @@ function startWorldSpaceDesktopLikeUi(world: World) {
         iconWrap.add(
           new UiImage({
             src: iconSrc,
-            width: 32,
-            height: 32,
+            width: XR_PANEL.iconRow,
+            height: XR_PANEL.iconRow,
             opacity: 0.95,
             color: "white",
             depthTest: false,
@@ -390,9 +428,17 @@ function startWorldSpaceDesktopLikeUi(world: World) {
           }),
         );
         left.add(iconWrap);
-        left.add(new Text({ text: p.nome, fontSize: 16, color: "white" }));
+        const titleCell = new Container({
+          flexGrow: 1,
+          flexShrink: 1,
+          minWidth: 0,
+          flexDirection: "column",
+          justifyContent: "center",
+        });
+        titleCell.add(new Text({ text: p.nome, fontSize: XR_PANEL.fsBody, color: "white", wordBreak: "break-word" }));
+        left.add(titleCell);
 
-        const right = new Container({ flexDirection: "row", alignItems: "center", gap: 10 });
+        const right = new Container({ flexShrink: 0, flexDirection: "row", alignItems: "center", gap: 10 });
         const w = typeof p.coda_minuti === "number" ? p.coda_minuti : null;
         if (w != null && w >= 0) {
           const badge = new Container({
@@ -406,7 +452,7 @@ function startWorldSpaceDesktopLikeUi(world: World) {
             alignItems: "center",
             justifyContent: "center",
           });
-          badge.add(new Text({ text: `${Math.round(w)} min`, fontSize: 14, color: "white" }));
+          badge.add(new Text({ text: `${Math.round(w)} min`, fontSize: XR_PANEL.fsSmall, color: "white" }));
           right.add(badge);
         } else if (w === -1) {
           const badge = new Container({
@@ -420,7 +466,7 @@ function startWorldSpaceDesktopLikeUi(world: World) {
             alignItems: "center",
             justifyContent: "center",
           });
-          badge.add(new Text({ text: "Closed", fontSize: 14, color: "rgba(255,255,255,0.85)" }));
+          badge.add(new Text({ text: "Closed", fontSize: XR_PANEL.fsSmall, color: "rgba(255,255,255,0.85)" }));
           right.add(badge);
         }
 
@@ -434,7 +480,7 @@ function startWorldSpaceDesktopLikeUi(world: World) {
         content.add(
           new Text({
             text: pois.length === 0 ? "Loading attractions…" : "No attractions found in poi.json.",
-            fontSize: 16,
+            fontSize: XR_PANEL.fsBody,
             color: "rgba(255,255,255,0.85)",
           }),
         );
@@ -442,13 +488,13 @@ function startWorldSpaceDesktopLikeUi(world: World) {
       for (const p of rides) {
         const unlockedNow = unlocked.has(p.id);
         const item = new Container({
-          width: 876,
-          height: 104,
+          width: "100%",
+          minHeight: XR_PANEL.rowBadgeMinH,
           borderRadius: 18,
           backgroundColor: "rgba(0,0,0,0.35)",
           borderWidth: 1,
           borderColor: "rgba(255,255,255,0.10)",
-          padding: 12,
+          padding: XR_PANEL.padInner,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "flex-start",
@@ -456,8 +502,9 @@ function startWorldSpaceDesktopLikeUi(world: World) {
         });
 
         const imgWrap = new Container({
-          width: 90,
-          height: 80,
+          width: XR_PANEL.stickerImg + 16,
+          height: XR_PANEL.stickerImg + 12,
+          flexShrink: 0,
           borderRadius: 16,
           backgroundColor: "rgba(0,0,0,0.25)",
           borderWidth: 1,
@@ -468,20 +515,28 @@ function startWorldSpaceDesktopLikeUi(world: World) {
         imgWrap.add(
           new UiImage({
             src: stickerForRideId(p.id),
-            width: 76,
-            height: 76,
+            width: XR_PANEL.stickerImg,
+            height: XR_PANEL.stickerImg,
             opacity: unlockedNow ? 0.92 : 0.32,
             depthTest: false,
             depthWrite: false,
           }),
         );
 
-        const textCol = new Container({ flexDirection: "column", alignItems: "flex-start", justifyContent: "center", gap: 6 });
-        textCol.add(new Text({ text: p.nome, fontSize: 16, color: "white" }));
+        const textCol = new Container({
+          flexGrow: 1,
+          flexShrink: 1,
+          minWidth: 0,
+          flexDirection: "column",
+          alignItems: "flex-start",
+          justifyContent: "center",
+          gap: 6,
+        });
+        textCol.add(new Text({ text: p.nome, fontSize: XR_PANEL.fsBody, color: "white", wordBreak: "break-word" }));
         textCol.add(
           new Text({
             text: unlockedNow ? "Unlocked" : "Locked",
-            fontSize: 14,
+            fontSize: XR_PANEL.fsSmall,
             color: unlockedNow ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.60)",
           }),
         );
