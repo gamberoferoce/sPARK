@@ -75,8 +75,11 @@ function startWorldSpaceUi(world: World) {
   uiRoot.position.set(0, 1.35, -1.2);
   uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
 
+  const XR_DEBUG = new URLSearchParams(window.location.search).has("xrDebug");
+
   // Default in XR: nothing visible until double-pinch.
-  uiRoot.visible = false;
+  // In debug mode, keep it visible so we can validate placement/scale first.
+  uiRoot.visible = XR_DEBUG ? true : false;
 
   type Kind = "cards" | "badge";
   let launcherOpen = false;
@@ -234,7 +237,7 @@ function startWorldSpaceUi(world: World) {
 
     if (wasHidden) {
       // double pinch toggles visibility when nothing is visible
-      if (now - lastPinchEndedAt < 420) toggleVisible();
+      if (now - lastPinchEndedAt < 600) toggleVisible();
       lastPinchEndedAt = now;
       pinchDown = false;
       return;
@@ -274,11 +277,14 @@ function startWorldSpaceUi(world: World) {
   };
 
   const ensureSessionHandlers = () => {
-    const s = world.session;
+    const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
     if (!s) return;
     hideDom();
     s.addEventListener("selectstart", onSelectStart);
     s.addEventListener("selectend", onSelectEnd);
+    // Some runtimes/devices fire `select` more reliably than `selectend` for hand pinch.
+    // Treat it as a "release" event for the double-pinch toggle and clicks.
+    s.addEventListener("select", onSelectEnd as EventListener);
     s.addEventListener("end", () => {
       setVisible(false);
       showDom();
@@ -286,11 +292,19 @@ function startWorldSpaceUi(world: World) {
   };
 
   const handlersTimer = window.setInterval(() => {
-    if (world.session) {
+    if (world.session || world.renderer?.xr?.getSession?.()) {
       ensureSessionHandlers();
       window.clearInterval(handlersTimer);
     }
   }, 200);
+
+  // Also listen to three's XR manager session start, which is the most reliable signal.
+  try {
+    // `three` types this as a strongly-typed event; we only need a best-effort hook here.
+    (world.renderer as any)?.xr?.addEventListener?.("sessionstart", ensureSessionHandlers as any);
+  } catch {
+    // ignore
+  }
 
   let raf = 0;
   let prev = 0;
@@ -326,6 +340,7 @@ function startWorldSpaceUi(world: World) {
     const s = world.session;
     s?.removeEventListener("selectstart", onSelectStart);
     s?.removeEventListener("selectend", onSelectEnd);
+    s?.removeEventListener("select", onSelectEnd as EventListener);
     try {
       uiRoot.dispose();
     } catch {
