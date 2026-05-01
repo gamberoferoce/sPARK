@@ -49,3 +49,13 @@ body {
 #root {
   background: transparent;
 }
+
+/* WebXR DOM Overlay: compositor draws this subtree over passthrough — same React UI as desktop */
+#root.xr-dom-overlay-host {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: auto;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}

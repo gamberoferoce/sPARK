@@ -1,4 +1,11 @@
-import { SessionMode, World } from "@iwsdk/core";
+import {
+  SessionMode,
+  World,
+  buildSessionInit,
+  launchXR,
+  normalizeReferenceSpec,
+  resolveReferenceSpaceType,
+} from "@iwsdk/core";
 import { Container, Image as UiImage, Text } from "@pmndrs/uikit";
 import { DoubleSide, Euler, Mesh, MeshBasicMaterial, Quaternion, Raycaster, SphereGeometry, Vector3 } from "three";
 
@@ -90,6 +97,41 @@ function ensureContainer() {
   el.style.pointerEvents = "none"; // keep React DOM interactive (DOM overlay-style UX)
   document.body.appendChild(el);
   return el;
+}
+
+/** Same binding as IWSDK `launchXR` after `requestSession`, plus DOM-overlay cleanup hooks. */
+async function attachXRSession(world: World, session: XRSession) {
+  const onNativeSessionEnd = () => {
+    session.removeEventListener("end", onNativeSessionEnd);
+    world.session = undefined;
+    document.getElementById("root")?.classList.remove("xr-dom-overlay-host");
+  };
+
+  session.addEventListener("end", onNativeSessionEnd);
+  try {
+    const refSpec = normalizeReferenceSpec(world.xrDefaults?.referenceSpace);
+    const resolvedType = await resolveReferenceSpaceType(
+      session,
+      refSpec.type,
+      refSpec.required ? [] : refSpec.fallbackOrder,
+    );
+    world.renderer.xr.getDepthSensingMesh = function () {
+      return null;
+    };
+    world.renderer.xr.setReferenceSpaceType(resolvedType);
+    await world.renderer.xr.setSession(session);
+    world.session = session;
+  } catch (err) {
+    console.error("[XR] Failed to acquire reference space:", err);
+    session.removeEventListener("end", onNativeSessionEnd);
+    document.getElementById("root")?.classList.remove("xr-dom-overlay-host");
+    try {
+      await session.end();
+    } catch {
+      // ignore
+    }
+    throw err;
+  }
 }
 
 async function getWorld() {
@@ -803,17 +845,45 @@ export async function enterAR() {
 
   const w = await getWorld();
 
-  // Back to basics: let IWSDK start the XR session normally.
-  // This avoids DOM overlay edge-cases and gives us a deterministic world-space "XR OK" panel.
-  w.launchXR({
-    sessionMode: SessionMode.ImmersiveAR,
-    features: {
-      handTracking: { required: false },
-      layers: true,
-    },
-  });
+  if (w.session) {
+    console.warn("[XR] Session already active");
+    return;
+  }
 
-  // Desktop-like UI (no web background) in world-space.
+  const overlayRoot = document.getElementById("root");
+  if (!overlayRoot) {
+    throw new Error("Missing #root element for DOM overlay.");
+  }
+
+  const xrFeatures = {
+    handTracking: { required: false } as const,
+    layers: true as const,
+  };
+
+  const baseInit = buildSessionInit({ features: xrFeatures });
+  const optionalFeatures = Array.from(new Set([...(baseInit.optionalFeatures ?? []), "dom-overlay"]));
+
+  const sessionInit = {
+    ...baseInit,
+    optionalFeatures,
+    domOverlay: { root: overlayRoot },
+  } as XRSessionInit;
+
+  try {
+    const session = await navigator.xr!.requestSession(SessionMode.ImmersiveAR, sessionInit);
+    overlayRoot.classList.add("xr-dom-overlay-host");
+    await attachXRSession(w, session);
+    // Same React tree as desktop — composited via WebXR DOM Overlay (see `#root.xr-dom-overlay-host`).
+    return;
+  } catch (e) {
+    overlayRoot.classList.remove("xr-dom-overlay-host");
+    console.warn("[XR] DOM Overlay path failed; falling back to UIKit world panel:", e);
+  }
+
+  launchXR(w, {
+    sessionMode: SessionMode.ImmersiveAR,
+    features: xrFeatures,
+  });
   startWorldSpaceDesktopLikeUi(w);
 }
 
