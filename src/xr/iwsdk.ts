@@ -2,6 +2,8 @@ import { SessionMode, World } from "@iwsdk/core";
 import { Container, Image as UiImage, Text } from "@pmndrs/uikit";
 import { DoubleSide, Euler, Mesh, MeshBasicMaterial, Quaternion, Raycaster, SphereGeometry, Vector3 } from "three";
 
+import { XR_CONTENT_H, XR_INNER_W, XR_PANEL, XR_ROW_W } from "./sparkPanelDesign";
+
 let worldPromise: Promise<World> | null = null;
 let stopWorldUi: (() => void) | null = null;
 
@@ -134,38 +136,6 @@ type Poi = {
   categoria?: string;
   coda_minuti?: number;
 };
-
-/**
- * Fixed design system (uikit layout px). Nothing inside uses % of “canvas” — only absolute numbers
- * derived from these tokens. World size is changed exclusively via `uiRoot.scale` (one uniform scale).
- */
-const XR_PANEL = {
-  w: 900,
-  h: 1060,
-  header: 56,
-  rowCardMinH: 72,
-  rowBadgeMinH: 100,
-  padOuter: 18,
-  padInner: 12,
-  gapSection: 12,
-  gapRow: 12,
-  iconTab: 26,
-  iconRow: 34,
-  stickerImg: 72,
-  tabMinW: 128,
-  fsBrand: 26,
-  fsTag: 13,
-  fsTab: 15,
-  fsBody: 16,
-  fsSmall: 13,
-} as const;
-
-/** Inner column width inside `uiRoot` padding (fixed “artboard”). */
-const XR_INNER_W = XR_PANEL.w - 2 * XR_PANEL.padOuter;
-/** Scroll viewport height: remaining space below header + section gap (fixed). */
-const XR_CONTENT_H = XR_PANEL.h - 2 * XR_PANEL.padOuter - XR_PANEL.header - XR_PANEL.gapSection;
-/** Row/card width inside the padded list region (fixed). */
-const XR_ROW_W = XR_INNER_W - 2 * XR_PANEL.padInner;
 
 function startWorldSpaceDesktopLikeUi(world: World) {
   stopWorldUi?.();
