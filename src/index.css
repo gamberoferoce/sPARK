@@ -50,12 +50,17 @@ body {
   background: transparent;
 }
 
-/* WebXR DOM Overlay: compositor draws this subtree over passthrough — same React UI as desktop */
+/* WebXR DOM Overlay: must sit above the IWSDK canvas; compositor also uses this layer on supported runtimes */
 #root.xr-dom-overlay-host {
   position: fixed;
   inset: 0;
-  z-index: 2;
+  z-index: 2147483646;
+  isolation: isolate;
   pointer-events: auto;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+  min-height: 100dvh;
+  min-height: 100vh;
+  /* Passthrough can wash out fully transparent UIs */
+  background: rgba(0, 0, 0, 0.28);
 }

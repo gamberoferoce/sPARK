@@ -99,6 +99,28 @@ function ensureContainer() {
   return el;
 }
 
+async function endActiveSessionIfAny(world: World) {
+  const s = world.session;
+  if (!s) return;
+  try {
+    await s.end();
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * True when the browser reports an active DOM Overlay. If `domOverlayState` is missing (older UAs),
+ * assume active — otherwise we'd tear down a session that might still be compositing the DOM.
+ */
+function isDomOverlayActive(session: XRSession): boolean {
+  const s = session as unknown as { domOverlayState?: { type?: string } | null | undefined };
+  if (!("domOverlayState" in s)) return true;
+  const t = s.domOverlayState?.type;
+  if (t == null || t === "" || t === "none") return false;
+  return true;
+}
+
 /** Same binding as IWSDK `launchXR` after `requestSession`, plus DOM-overlay cleanup hooks. */
 async function attachXRSession(world: World, session: XRSession) {
   const onNativeSessionEnd = () => {
@@ -870,15 +892,33 @@ export async function enterAR() {
   } as XRSessionInit;
 
   try {
-    const session = await navigator.xr!.requestSession(SessionMode.ImmersiveAR, sessionInit);
+    const domSession = await navigator.xr!.requestSession(SessionMode.ImmersiveAR, sessionInit);
     overlayRoot.classList.add("xr-dom-overlay-host");
-    await attachXRSession(w, session);
-    // Same React tree as desktop — composited via WebXR DOM Overlay (see `#root.xr-dom-overlay-host`).
+    await attachXRSession(w, domSession);
+
+    if (!isDomOverlayActive(domSession)) {
+      // Session starts but overlay was omitted → previously we returned with zero UI (no UIKit).
+      console.warn("[XR] Session started without DOM Overlay; ending session and using UIKit panel.");
+      overlayRoot.classList.remove("xr-dom-overlay-host");
+      try {
+        await domSession.end();
+      } catch {
+        // ignore
+      }
+      throw new Error("dom-overlay inactive");
+    }
+
+    const hud = ensureHtmlOverlay();
+    hud.textContent =
+      "AR: DOM overlay attivo (UI React)\nSe non vedi i pulsanti, usa Exit AR e riprova.\n";
+
     return;
   } catch (e) {
     overlayRoot.classList.remove("xr-dom-overlay-host");
     console.warn("[XR] DOM Overlay path failed; falling back to UIKit world panel:", e);
   }
+
+  await endActiveSessionIfAny(w);
 
   launchXR(w, {
     sessionMode: SessionMode.ImmersiveAR,
@@ -888,6 +928,7 @@ export async function enterAR() {
 }
 
 export async function exitAR() {
+  removeHtmlOverlay();
   if (!worldPromise) return;
   const w = await worldPromise;
   stopWorldUi?.();
