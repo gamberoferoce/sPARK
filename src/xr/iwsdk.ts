@@ -1,4 +1,6 @@
 import { SessionMode, World } from "@iwsdk/core";
+import { Container, Text } from "@pmndrs/uikit";
+import { Euler, Vector3 } from "three";
 
 let worldPromise: Promise<World> | null = null;
 let stopWorldUi: (() => void) | null = null;
@@ -33,7 +35,76 @@ async function getWorld() {
   return await worldPromise;
 }
 
-// DOM overlay input mapping was superseded by DOM overlay XR mode.
+function startWorldSpaceDebugUi(world: World) {
+  stopWorldUi?.();
+
+  const uiRoot = new Container({
+    width: 680,
+    height: 220,
+    padding: 22,
+    gap: 10,
+    borderRadius: 26,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.35)",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+  });
+
+  // Big and unmistakable: 680px => ~0.68m at 0.001 scale.
+  uiRoot.scale.setScalar(0.001);
+  uiRoot.position.set(0, 1.45, -1.2);
+  uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
+  uiRoot.visible = true;
+
+  uiRoot.add(
+    new Text({
+      text: "XR OK",
+      fontSize: 64,
+      color: "white",
+    }),
+  );
+  uiRoot.add(
+    new Text({
+      text: "If you can read this, world-space UI rendering works.",
+      fontSize: 18,
+      color: "rgba(255,255,255,0.92)",
+    }),
+  );
+  uiRoot.add(
+    new Text({
+      text: "Next: re-enable launcher + ray + pinch.",
+      fontSize: 16,
+      color: "rgba(255,255,255,0.75)",
+    }),
+  );
+
+  world.getPersistentRoot().add(uiRoot);
+
+  let raf = 0;
+  const tmp = new Vector3();
+  let prev = 0;
+  const tick = (t: number) => {
+    raf = requestAnimationFrame(tick);
+    const delta = prev ? t - prev : 16;
+    prev = t;
+    // Face the user (but keep world-space position).
+    uiRoot.lookAt(world.camera.getWorldPosition(tmp));
+    uiRoot.update(delta);
+  };
+  raf = requestAnimationFrame(tick);
+
+  stopWorldUi = () => {
+    cancelAnimationFrame(raf);
+    try {
+      uiRoot.dispose();
+    } catch {
+      // ignore
+    }
+    uiRoot.removeFromParent();
+  };
+}
 
 export async function enterAR() {
   if (typeof navigator === "undefined" || !("xr" in navigator)) {
@@ -41,44 +112,18 @@ export async function enterAR() {
   }
   const w = await getWorld();
 
-  // DOM Overlay mode:
-  // - Keep the existing React DOM UI exactly as on desktop.
-  // - Request an immersive-ar session that allows DOM overlay rendering.
-  const xr = (navigator as any).xr as XRSystem;
-  const initBase: XRSessionInit = {
-    // If DOM overlay isn't actually granted, the browser may hide the entire page in immersive mode
-    // and you'll see "nothing". Make it REQUIRED so we fail fast with a visible error instead.
-    requiredFeatures: ["dom-overlay"],
-    optionalFeatures: ["hand-tracking", "layers"],
-    // DOM overlay root must be an Element.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    domOverlay: { root: document.body } as any,
-  };
-
-  // Prefer local-floor if available; fall back to local/viewer.
-  let session: XRSession;
-  try {
-    session = await xr.requestSession("immersive-ar", { ...initBase, requiredFeatures: ["local-floor"] });
-  } catch {
-    try {
-      session = await xr.requestSession("immersive-ar", { ...initBase, requiredFeatures: ["local"] });
-    } catch {
-      session = await xr.requestSession("immersive-ar", initBase);
-    }
-  }
-
-  // IWSDK World uses a three WebXRManager under the hood.
-  // Set the session directly so IWSDK keeps its render loop.
-  await w.renderer.xr.setSession(session);
-  w.session = session;
-
-  // Ensure any world-space UI is stopped; we want the desktop DOM UX in AR.
-  stopWorldUi?.();
-  stopWorldUi = null;
-
-  session.addEventListener("end", () => {
-    if (w.session === session) w.session = undefined;
+  // Back to basics: let IWSDK start the XR session normally.
+  // This avoids DOM overlay edge-cases and gives us a deterministic world-space "XR OK" panel.
+  w.launchXR({
+    sessionMode: SessionMode.ImmersiveAR,
+    features: {
+      handTracking: { required: false },
+      layers: true,
+    },
   });
+
+  // Always show something visible in XR first.
+  startWorldSpaceDebugUi(w);
 }
 
 export async function exitAR() {
