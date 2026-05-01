@@ -135,7 +135,10 @@ type Poi = {
   coda_minuti?: number;
 };
 
-/** Layout units are uikit “px” inside the panel only; real-world size is exclusively `uiRoot.scale`. */
+/**
+ * Fixed design system (uikit layout px). Nothing inside uses % of “canvas” — only absolute numbers
+ * derived from these tokens. World size is changed exclusively via `uiRoot.scale` (one uniform scale).
+ */
 const XR_PANEL = {
   w: 900,
   h: 1060,
@@ -156,6 +159,13 @@ const XR_PANEL = {
   fsBody: 16,
   fsSmall: 13,
 } as const;
+
+/** Inner column width inside `uiRoot` padding (fixed “artboard”). */
+const XR_INNER_W = XR_PANEL.w - 2 * XR_PANEL.padOuter;
+/** Scroll viewport height: remaining space below header + section gap (fixed). */
+const XR_CONTENT_H = XR_PANEL.h - 2 * XR_PANEL.padOuter - XR_PANEL.header - XR_PANEL.gapSection;
+/** Row/card width inside the padded list region (fixed). */
+const XR_ROW_W = XR_INNER_W - 2 * XR_PANEL.padInner;
 
 function startWorldSpaceDesktopLikeUi(world: World) {
   stopWorldUi?.();
@@ -197,7 +207,7 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     fontWeight: "medium",
   });
 
-  // Empirical Quest scale: ~20× prior default for readable headset size.
+  // Single knob for device/viewport: uniform scale of the whole fixed-design panel (no per-branch scaling).
   uiRoot.scale.setScalar(Number.isFinite(dbgUiScale) ? dbgUiScale : 0.032);
   uiRoot.position.set(0, 0, Number.isFinite(dbgUiZ) ? dbgUiZ : -1.1);
   uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
@@ -215,7 +225,7 @@ function startWorldSpaceDesktopLikeUi(world: World) {
   }
 
   const titleRow = new Container({
-    width: "100%",
+    width: XR_INNER_W,
     height: XR_PANEL.header,
     flexShrink: 0,
     flexDirection: "row",
@@ -255,10 +265,9 @@ function startWorldSpaceDesktopLikeUi(world: World) {
   });
 
   const content = new Container({
-    width: "100%",
-    flexGrow: 1,
-    flexShrink: 1,
-    minHeight: 0,
+    width: XR_INNER_W,
+    height: XR_CONTENT_H,
+    flexShrink: 0,
     borderRadius: 22,
     backgroundColor: uiBright ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.18)",
     borderWidth: uiProbe ? 2 : 1,
@@ -266,7 +275,6 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     padding: XR_PANEL.padInner,
     flexDirection: "column",
     gap: 10,
-    // Scroll only the list: `minHeight: 0` + `flexGrow` lets yoga give it a bounded box (flex scroll pattern).
     overflow: "scroll",
   });
 
@@ -323,7 +331,7 @@ function startWorldSpaceDesktopLikeUi(world: World) {
 
     if (uiProbe) {
       const probe = new Container({
-        width: "100%",
+        width: XR_ROW_W,
         minHeight: 120,
         borderRadius: 18,
         backgroundColor: "rgba(255,40,40,0.92)",
@@ -371,7 +379,7 @@ function startWorldSpaceDesktopLikeUi(world: World) {
       }
       for (const p of pois) {
         const row = new Container({
-          width: "100%",
+          width: XR_ROW_W,
           minHeight: XR_PANEL.rowCardMinH,
           borderRadius: 18,
           backgroundColor: "rgba(0,0,0,0.35)",
@@ -488,7 +496,7 @@ function startWorldSpaceDesktopLikeUi(world: World) {
       for (const p of rides) {
         const unlockedNow = unlocked.has(p.id);
         const item = new Container({
-          width: "100%",
+          width: XR_ROW_W,
           minHeight: XR_PANEL.rowBadgeMinH,
           borderRadius: 18,
           backgroundColor: "rgba(0,0,0,0.35)",
