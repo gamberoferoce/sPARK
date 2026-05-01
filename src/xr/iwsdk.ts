@@ -1,9 +1,78 @@
 import { SessionMode, World } from "@iwsdk/core";
 import { Container, Image as UiImage, Text } from "@pmndrs/uikit";
-import { Euler, Quaternion, Raycaster, Vector3 } from "three";
+import { DoubleSide, Euler, Mesh, MeshBasicMaterial, Quaternion, Raycaster, SphereGeometry, Vector3 } from "three";
 
 let worldPromise: Promise<World> | null = null;
 let stopWorldUi: (() => void) | null = null;
+
+function parseFloatParam(name: string, fallback: number) {
+  try {
+    const qs = new URLSearchParams(window.location.search);
+    let v = qs.get(name);
+    if (!v) {
+      try {
+        const raw = sessionStorage.getItem("xrFlags");
+        if (raw) {
+          const parsed = JSON.parse(raw) as unknown;
+          if (parsed && typeof parsed === "object" && parsed !== null && name in (parsed as any)) {
+            v = String((parsed as any)[name]);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    if (!v) return fallback;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function flagParam(name: string) {
+  try {
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.has(name)) return true;
+    try {
+      const raw = sessionStorage.getItem("xrFlags");
+      if (!raw) return false;
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== "object" || parsed === null) return false;
+      return name in (parsed as any);
+    } catch {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+}
+
+function ensureHtmlOverlay() {
+  let el = document.getElementById("xr-html-debug") as HTMLDivElement | null;
+  if (el) return el;
+  el = document.createElement("div");
+  el.id = "xr-html-debug";
+  el.style.position = "fixed";
+  el.style.left = "12px";
+  el.style.top = "12px";
+  el.style.zIndex = "999999";
+  el.style.maxWidth = "min(92vw, 520px)";
+  el.style.padding = "10px 12px";
+  el.style.borderRadius = "14px";
+  el.style.background = "rgba(0,0,0,0.65)";
+  el.style.border = "1px solid rgba(255,255,255,0.18)";
+  el.style.color = "rgba(255,255,255,0.92)";
+  el.style.font = "12px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  el.style.pointerEvents = "none";
+  document.body.appendChild(el);
+  return el;
+}
+
+function removeHtmlOverlay() {
+  const el = document.getElementById("xr-html-debug");
+  if (el) el.remove();
+}
 
 function ensureContainer() {
   let el = document.getElementById("xr-scene") as HTMLDivElement | null;
@@ -69,6 +138,10 @@ type Poi = {
 function startWorldSpaceDesktopLikeUi(world: World) {
   stopWorldUi?.();
 
+  const debug = flagParam("xrDbg");
+  const dbgUiScale = parseFloatParam("xrUiScale", NaN);
+  const dbgUiZ = parseFloatParam("xrUiZ", NaN);
+
   const rootEl = document.getElementById("root");
   const hideDom = () => {
     if (rootEl) rootEl.style.display = "none";
@@ -92,8 +165,8 @@ function startWorldSpaceDesktopLikeUi(world: World) {
   });
 
   // Empirical Quest scale: big enough, not face-locked.
-  uiRoot.scale.setScalar(0.0016);
-  uiRoot.position.set(0, 1.42, -1.25);
+  uiRoot.scale.setScalar(Number.isFinite(dbgUiScale) ? dbgUiScale : 0.0016);
+  uiRoot.position.set(0, 1.42, Number.isFinite(dbgUiZ) ? dbgUiZ : -1.25);
   uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
   uiRoot.visible = true;
 
@@ -199,6 +272,15 @@ function startWorldSpaceDesktopLikeUi(world: World) {
     uiRoot.add(titleRow);
 
     if (selected === "cards") {
+      if (pois.length === 0) {
+        content.add(
+          new Text({
+            text: "Loading POIs…",
+            fontSize: 16,
+            color: "rgba(255,255,255,0.85)",
+          }),
+        );
+      }
       for (const p of pois) {
         const row = new Container({
           width: 876,
@@ -280,6 +362,15 @@ function startWorldSpaceDesktopLikeUi(world: World) {
       }
     } else {
       const rides = pois.filter((p) => p.categoria === "attrazione");
+      if (rides.length === 0) {
+        content.add(
+          new Text({
+            text: pois.length === 0 ? "Loading attractions…" : "No attractions found in poi.json.",
+            fontSize: 16,
+            color: "rgba(255,255,255,0.85)",
+          }),
+        );
+      }
       for (const p of rides) {
         const unlockedNow = unlocked.has(p.id);
         const item = new Container({
@@ -336,6 +427,23 @@ function startWorldSpaceDesktopLikeUi(world: World) {
   world.getPersistentRoot().add(uiRoot);
   build();
 
+  // Debug helpers (Quest-friendly): tiny spheres at multiple depths + HTML overlay stats.
+  const dbgMeshes: Mesh[] = [];
+  if (debug) {
+    const root = world.getPersistentRoot();
+    const mk = (color: number, x: number, y: number, z: number, r: number) => {
+      const m = new Mesh(new SphereGeometry(r, 18, 18), new MeshBasicMaterial({ color, depthWrite: false, transparent: true, opacity: 0.95, side: DoubleSide }));
+      m.position.set(x, y, z);
+      root.add(m);
+      dbgMeshes.push(m);
+    };
+    mk(0xff3333, -0.35, 1.35, -0.35, 0.06); // near
+    mk(0xffdd33, 0.0, 1.35, -1.25, 0.06); // medium
+    mk(0x33aaff, 0.35, 1.35, -3.0, 0.06); // far
+  }
+
+  const overlayEl = debug ? ensureHtmlOverlay() : null;
+
   // Load poi.json like desktop
   void fetch("/poi.json")
     .then((r) => r.json())
@@ -346,7 +454,8 @@ function startWorldSpaceDesktopLikeUi(world: World) {
       }
     })
     .catch(() => {
-      // ignore
+      pois = [];
+      build();
     });
 
   const raycaster = new Raycaster();
@@ -441,6 +550,9 @@ function startWorldSpaceDesktopLikeUi(world: World) {
 
   let raf = 0;
   let prev = 0;
+  let frames = 0;
+  let hitsUi = 0;
+  let hitsDbg = 0;
   const tick = (t: number) => {
     raf = requestAnimationFrame(tick);
     const delta = prev ? t - prev : 16;
@@ -459,6 +571,47 @@ function startWorldSpaceDesktopLikeUi(world: World) {
       }
     }
     uiRoot.update(delta);
+
+    frames++;
+    if (debug && overlayEl && frames % 15 === 0) {
+      // Quick ray diagnostics (doesn't depend on UIKit raycasting internals).
+      const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
+      const refSpace = world.renderer?.xr?.getReferenceSpace?.();
+      const frame = world.renderer?.xr?.getFrame?.();
+      const src =
+        s &&
+        (world.input.getPrimaryInputSource("right") ??
+          world.input.getPrimaryInputSource("left") ??
+          s.inputSources?.[0]);
+      let rayOk = false;
+      if (s && refSpace && frame && src) {
+        const pose = frame.getPose(src.targetRaySpace, refSpace);
+        rayOk = !!pose;
+        if (pose) {
+          origin.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
+          tmpQuat.set(
+            pose.transform.orientation.x,
+            pose.transform.orientation.y,
+            pose.transform.orientation.z,
+            pose.transform.orientation.w,
+          );
+          dir.set(0, 0, -1).applyQuaternion(tmpQuat).normalize();
+          raycaster.ray.origin.copy(origin);
+          raycaster.ray.direction.copy(dir);
+          raycaster.far = 25;
+          hitsUi = raycaster.intersectObject(uiRoot, true).length;
+          hitsDbg = dbgMeshes.reduce((acc, m) => acc + raycaster.intersectObject(m, false).length, 0);
+        }
+      }
+
+      overlayEl.textContent =
+        `XR dbg\n` +
+        `session: ${s ? "yes" : "no"} | rayPose: ${rayOk ? "yes" : "no"}\n` +
+        `hits(uiRoot): ${hitsUi} | hits(debug sphere): ${hitsDbg}\n` +
+        `pois: ${pois.length}\n` +
+        `ui.scale: ${uiRoot.scale.x.toFixed(6)} ui.z: ${uiRoot.position.z.toFixed(3)}\n` +
+        `tips: add ?xrDbg&xrUiScale=0.004&xrUiZ=-0.9`;
+    }
   };
   raf = requestAnimationFrame(tick);
 
@@ -475,6 +628,17 @@ function startWorldSpaceDesktopLikeUi(world: World) {
       // ignore
     }
     uiRoot.removeFromParent();
+    for (const m of dbgMeshes) {
+      try {
+        m.geometry.dispose();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (m.material as any)?.dispose?.();
+      } catch {
+        // ignore
+      }
+      m.removeFromParent();
+    }
+    removeHtmlOverlay();
     showDom();
   };
 }
@@ -483,6 +647,25 @@ export async function enterAR() {
   if (typeof navigator === "undefined" || !("xr" in navigator)) {
     throw new Error("WebXR is not available in this browser.");
   }
+
+  // XR Session Navigation limitation:
+  // Quest Browser navigation happens WITHOUT query strings, so flags like `?xrDbg` won't survive.
+  // Persist XR debug toggles into sessionStorage so repeated enters keep working.
+  try {
+    const qs = new URLSearchParams(window.location.search);
+    const xrPairs: Array<[string, string]> = [];
+    qs.forEach((value, key) => {
+      if (key === "xrDbg" || key.startsWith("xrUi")) xrPairs.push([key, value]);
+    });
+    if (xrPairs.length) {
+      const obj: Record<string, string> = {};
+      for (const [k, v] of xrPairs) obj[k] = v;
+      sessionStorage.setItem("xrFlags", JSON.stringify(obj));
+    }
+  } catch {
+    // ignore
+  }
+
   const w = await getWorld();
 
   // Back to basics: let IWSDK start the XR session normally.
