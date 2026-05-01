@@ -110,15 +110,12 @@ async function endActiveSessionIfAny(world: World) {
 }
 
 /**
- * True when the browser reports an active DOM Overlay. If `domOverlayState` is missing (older UAs),
- * assume active — otherwise we'd tear down a session that might still be compositing the DOM.
+ * Per https://immersive-web.github.io/dom-overlays/#xr-session-interface — if optional `dom-overlay`
+ * was dropped, `domOverlayState` is null (not the React/IWSDK UIKit panel; IWSDK docs are about uikit).
  */
 function isDomOverlayActive(session: XRSession): boolean {
-  const s = session as unknown as { domOverlayState?: { type?: string } | null | undefined };
-  if (!("domOverlayState" in s)) return true;
-  const t = s.domOverlayState?.type;
-  if (t == null || t === "" || t === "none") return false;
-  return true;
+  const st = (session as unknown as { domOverlayState: { type: string } | null }).domOverlayState;
+  return st != null && typeof st.type === "string" && st.type.length > 0;
 }
 
 /** Same binding as IWSDK `launchXR` after `requestSession`, plus DOM-overlay cleanup hooks. */
@@ -882,17 +879,38 @@ export async function enterAR() {
     layers: true as const,
   };
 
-  const baseInit = buildSessionInit({ features: xrFeatures });
-  const optionalFeatures = Array.from(new Set([...(baseInit.optionalFeatures ?? []), "dom-overlay"]));
-
-  const sessionInit = {
-    ...baseInit,
-    optionalFeatures,
+  // Quest/Mobile often negotiates optional features as a bundle — try a lean request first (dom-overlay + reference space),
+  // then the fuller IWSDK-style init. See https://immersive-web.github.io/dom-overlays/
+  const domRequired = flagParam("xrDomRequired");
+  const leanDomInit = (): XRSessionInit => ({
+    ...(domRequired ? { requiredFeatures: ["dom-overlay"] as string[] } : {}),
+    optionalFeatures: domRequired
+      ? (["local-floor", "bounded-floor"] as string[])
+      : (["dom-overlay", "local-floor", "bounded-floor"] as string[]),
     domOverlay: { root: overlayRoot },
-  } as XRSessionInit;
+  });
+  const richDomInit = (): XRSessionInit => {
+    const baseInit = buildSessionInit({ features: xrFeatures });
+    const optionalFeatures = Array.from(new Set([...(baseInit.optionalFeatures ?? []), "dom-overlay"]));
+    return {
+      ...baseInit,
+      optionalFeatures,
+      domOverlay: { root: overlayRoot },
+    } as XRSessionInit;
+  };
 
   try {
-    const domSession = await navigator.xr!.requestSession(SessionMode.ImmersiveAR, sessionInit);
+    let domSession: XRSession;
+    if (domRequired) {
+      domSession = await navigator.xr!.requestSession(SessionMode.ImmersiveAR, leanDomInit());
+    } else {
+      try {
+        domSession = await navigator.xr!.requestSession(SessionMode.ImmersiveAR, leanDomInit());
+      } catch (leanErr) {
+        console.warn("[XR] Lean DOM-overlay session failed, retrying with full optional features:", leanErr);
+        domSession = await navigator.xr!.requestSession(SessionMode.ImmersiveAR, richDomInit());
+      }
+    }
     overlayRoot.classList.add("xr-dom-overlay-host");
     await attachXRSession(w, domSession);
 
