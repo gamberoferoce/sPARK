@@ -60,7 +60,7 @@ function LauncherButton({
               <>
                 {showOtherOnLeft ? (
                   <div
-                    className="absolute top-1/2 -translate-y-1/2 rounded-full bg-zinc-950/70 text-zinc-100 ring-1 ring-white/10 backdrop-blur"
+                    className="absolute top-1/2 -translate-y-1/2 rounded-full border border-[#27272a] bg-[rgba(0,0,0,0.45)] text-zinc-100"
                     style={{
                       left: "-52px",
                       width: 36,
@@ -81,7 +81,7 @@ function LauncherButton({
                   </div>
                 ) : (
                   <div
-                    className="absolute top-1/2 -translate-y-1/2 rounded-full bg-zinc-950/70 text-zinc-100 ring-1 ring-white/10 backdrop-blur"
+                    className="absolute top-1/2 -translate-y-1/2 rounded-full border border-[#27272a] bg-[rgba(0,0,0,0.45)] text-zinc-100"
                     style={{
                       right: "-52px",
                       width: 36,
@@ -110,7 +110,7 @@ function LauncherButton({
         <button
           type="button"
         aria-label={kind === "badge" ? "Open badges" : "Open cards"}
-          className="relative z-[1] grid h-10 w-10 place-items-center rounded-full bg-zinc-950/80 text-zinc-100 ring-1 ring-white backdrop-blur select-none transition-transform duration-150 hover:scale-[1.03] hover:ring-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          className="relative z-[1] grid h-10 w-10 place-items-center rounded-full border border-[#27272a] bg-[rgba(0,0,0,0.45)] text-zinc-100 select-none transition-transform duration-150 hover:scale-[1.03] hover:border-white/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           style={{ touchAction: "none" }}
           onPointerDown={(e) => {
             e.preventDefault();
