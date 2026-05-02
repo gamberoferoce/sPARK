@@ -384,7 +384,7 @@ export function Onboarding({ onComplete }: Props) {
                             draggable={false}
                           />
                           <div className="min-w-0 max-w-[min(52vw,260px)] space-y-1.5">
-                            <p className="text-xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-2xl">
+                            <p className="text-xl font-semibold leading-tight tracking-wide text-zinc-50 sm:text-2xl">
                               Welcome to sPARK
                             </p>
                             <p className="text-sm font-medium leading-relaxed text-zinc-200">

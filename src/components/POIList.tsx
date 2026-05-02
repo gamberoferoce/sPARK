@@ -153,7 +153,7 @@ export function POIList({
                 type="button"
                 onClick={() => setTab(t.id)}
                 className={cn(
-                  "min-h-[36px] w-full max-w-[132px] whitespace-nowrap text-center text-[14px] leading-tight transition-colors duration-150",
+                  "min-h-[36px] w-full max-w-[132px] whitespace-nowrap text-center text-[14px] leading-tight tracking-wide transition-colors duration-150",
                   on
                     ? "rounded-full px-4 py-2 font-normal text-white bg-zinc-600/50 shadow-inner shadow-black/20 ring-1 ring-white/10 hover:bg-zinc-500/50"
                     : "rounded-full bg-transparent px-2 py-2 font-normal text-white hover:bg-white/[0.08] hover:text-zinc-100",
@@ -284,7 +284,7 @@ export function POIList({
                   </span>
 
                   <div className="min-w-0 flex-1 text-left">
-                    <div className="truncate text-[15px] font-normal leading-snug tracking-tight text-white">
+                    <div className="truncate text-[15px] font-normal leading-snug tracking-wide text-white">
                       {p.nome}
                     </div>
                     <div className="mt-0.5 flex items-center gap-1.5 text-[12px] font-normal leading-none text-zinc-500">
@@ -296,14 +296,14 @@ export function POIList({
                   <div className="shrink-0 pl-0.5 translate-x-1.5">
                     {isClosed ? (
                       <span
-                        className="inline-flex min-w-[3rem] items-center justify-center rounded-full px-2 py-0.5 text-[12px] font-normal leading-tight tracking-tight text-zinc-200 ring-1 ring-white/10 bg-zinc-800/70"
+                        className="inline-flex min-w-[3rem] items-center justify-center rounded-full px-2 py-0.5 text-[12px] font-normal leading-tight tracking-wide text-zinc-200 ring-1 ring-white/10 bg-zinc-800/70"
                       >
                         Closed
                       </span>
                     ) : showWait ? (
                       <span
                         className={cn(
-                          "inline-flex min-w-[3rem] items-center justify-center rounded-full px-2 py-0.5 text-[12px] font-normal tabular-nums leading-tight tracking-tight",
+                          "inline-flex min-w-[3rem] items-center justify-center rounded-full px-2 py-0.5 text-[12px] font-normal tabular-nums leading-tight tracking-wide",
                           codaBadgeClass(coda),
                         )}
                       >
