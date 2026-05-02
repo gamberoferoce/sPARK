@@ -369,22 +369,34 @@ export function Onboarding({ onComplete }: Props) {
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
             <div className="mx-auto flex min-h-full w-full max-w-full flex-col justify-center py-2">
               <div className="relative p-3">
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-transparent ring-1 ring-white">
-                    <StepIcon className="h-4 w-4 text-zinc-200" />
-                  </span>
-                  <div className="min-w-0 flex-1">
+                <div
+                  className={
+                    step === 0
+                      ? "flex flex-col items-center text-center"
+                      : "flex items-start gap-3"
+                  }
+                >
+                  {step !== 0 ? (
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-transparent ring-1 ring-white">
+                      <StepIcon className="h-4 w-4 text-zinc-200" />
+                    </span>
+                  ) : null}
+                  <div className={step === 0 ? "w-full max-w-md" : "min-w-0 flex-1"}>
                     {step === 0 ? (
-                      <div>
+                      <div className="flex w-full flex-col items-center text-center">
                         <img
                           src="/spark-mascot.png"
                           alt=""
                           className="mx-auto mb-4 block h-[clamp(7rem,28vw,10rem)] w-auto max-w-[min(100%,240px)] object-contain select-none pointer-events-none"
                           draggable={false}
                         />
-                        <p className="text-sm font-medium leading-relaxed text-zinc-200">
-                          Welcome to sPARK, your AR app for theme parks.
-                          <br />
+                        <p className="text-xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-2xl">
+                          Welcome to sPARK
+                        </p>
+                        <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-200">
+                          Your AR app for theme parks.
+                        </p>
+                        <p className="mt-3 text-sm font-medium leading-relaxed text-zinc-200">
                           I need Just a couple of details to personalize your experience.
                         </p>
                       </div>
