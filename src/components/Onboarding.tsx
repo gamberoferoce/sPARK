@@ -10,9 +10,6 @@ import { Flame, Ruler, Sparkles, UtensilsCrossed } from "lucide-react";
 import { driftFloatClassName } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 
-/** Public asset; respects Vite `base` so deploy subpaths resolve correctly. */
-const ONBOARDING_BG_VIDEO = `${import.meta.env.BASE_URL}videos/onboarding-vegetation.mp4`;
-
 export type Intensita = "bassa" | "media" | "alta";
 export type Dieta = "normale" | "vegano" | "celiaco";
 
@@ -341,21 +338,8 @@ export function Onboarding({ onComplete }: Props) {
   const StepIcon = STEP_ICONS[step];
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-20 isolate min-h-[100dvh]">
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-black" aria-hidden>
-        <video
-          className="absolute inset-0 h-full w-full min-h-full min-w-full object-cover opacity-90"
-          src={ONBOARDING_BG_VIDEO}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-        />
-        <div className="absolute inset-0 z-[1] bg-black/35" aria-hidden />
-      </div>
-      <div className="relative z-10 flex h-full min-h-[100dvh] w-full items-center justify-center px-4">
-        <div className="pointer-events-auto flex h-[42dvh] max-h-[42dvh] w-full max-w-lg flex-col bg-transparent">
+    <div className="pointer-events-none fixed inset-0 z-20 flex min-h-[100dvh] items-center justify-center px-4">
+      <div className="pointer-events-auto flex h-[42dvh] max-h-[42dvh] w-full max-w-lg flex-col bg-transparent">
         <main className="flex min-h-0 w-full flex-1 flex-col px-4">
           <div className="shrink-0 pb-3 pt-2">
             <div className="mt-2 grid grid-cols-4 gap-2">
@@ -553,7 +537,6 @@ export function Onboarding({ onComplete }: Props) {
             </div>
           )}
         </footer>
-        </div>
       </div>
     </div>
   );
