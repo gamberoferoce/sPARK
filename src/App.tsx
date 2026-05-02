@@ -807,7 +807,7 @@ function App() {
       <div className="fixed bottom-3 left-3 z-[95] pb-[env(safe-area-inset-bottom,0px)]">
         <button
           type="button"
-          className="rounded-full bg-black/40 px-4 py-2 text-xs font-semibold text-zinc-100 ring-1 ring-white/10 backdrop-blur hover:bg-white/10"
+          className="rounded-full bg-black/40 px-4 py-2 text-xs font-semibold tracking-wide text-zinc-100 ring-1 ring-white/10 backdrop-blur hover:bg-white/10"
           onClick={async () => {
             setXrError(null);
             try {
@@ -829,8 +829,8 @@ function App() {
       </div>
 
       {!xrOpen ? (
-        <div className="fixed bottom-3 right-3 z-[95] max-w-[min(96vw,520px)] pb-[env(safe-area-inset-bottom,0px)]">
-          <footer className="pointer-events-auto text-right text-[12px] leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+        <div className="fixed bottom-3 right-3 z-[95] max-w-[min(98vw,900px)] pb-[env(safe-area-inset-bottom,0px)]">
+          <footer className="pointer-events-auto text-right text-[12px] leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
             <p className="m-0">
               Based on Europa-Park attractions.{" "}
               <button
@@ -845,7 +845,8 @@ function App() {
                 Click here
               </button>{" "}
               to open the badge gallery and save an attraction badge image to scan.
-              <br />
+            </p>
+            <p className="m-0 mt-1">
               Real-time attraction queue data powered by{" "}
               <a
                 href="https://queue-times.com"
