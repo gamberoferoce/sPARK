@@ -421,8 +421,10 @@ export function Onboarding({ onComplete }: Props) {
 
                     {step === 2 ? (
                       <div>
-                        <div className="text-sm font-semibold text-zinc-100">Dietary preferences</div>
-                        <p className="mt-0.5 text-xs text-zinc-400">We’ll only show compatible food spots.</p>
+                        <div className="text-sm font-semibold text-zinc-100">Your diet, your rules.</div>
+                        <p className="mt-0.5 text-xs text-zinc-400">
+                          We&apos;ll filter the rest out…
+                        </p>
 
                         <div className="mt-4 space-y-3">
                           {ALL_DIETE.map((d) => {
