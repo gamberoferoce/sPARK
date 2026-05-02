@@ -406,9 +406,9 @@ export function Onboarding({ onComplete }: Props) {
 
                     {step === 1 ? (
                       <div>
-                        <div className="text-sm font-semibold text-zinc-100">How tall are you?</div>
+                        <div className="text-sm font-semibold text-zinc-100">Are you tall enough?</div>
                         <p className="mt-0.5 text-xs text-zinc-400">
-                          We&apos;ll filter the attractions you can actually ride.
+                          We&apos;ll show you all the rides you can jump on.
                         </p>
 
                         <HeightCenterCarousel
