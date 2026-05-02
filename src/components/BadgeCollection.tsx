@@ -1,5 +1,6 @@
 import type { Poi } from "@/types/poi";
 import { useEffect, useRef } from "react";
+import { cn } from "@/lib/utils";
 
 const STICKERS = [
   "/stickers/sticker-1.png",
@@ -128,14 +129,19 @@ export function BadgeCollection({
             }}
           >
             <div className="flex w-max gap-4 pr-4 ml-auto">
-              {attrazioni.map((a) => {
+              {attrazioni.map((a, idx) => {
                 const unlocked = badgesSbloccati.includes(a.id);
                 const stickerSrc = stickerForRideId(a.id);
 
                 return (
                   <div
                     key={a.id}
-                    className="group flex w-[88px] flex-col items-center rounded-xl pb-1 pt-0.5 transition-[transform] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] motion-safe:will-change-transform motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-safe:hover:-translate-y-1 motion-safe:hover:scale-[1.06]"
+                    className={cn(
+                      "group flex w-[88px] flex-col items-center rounded-xl pb-1 pt-0.5 transition-[transform] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] motion-safe:will-change-transform motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:rotate-0 motion-safe:hover:-translate-y-1 motion-safe:hover:scale-[1.06]",
+                      idx % 2 === 0
+                        ? "motion-safe:hover:-rotate-[3deg]"
+                        : "motion-safe:hover:rotate-[3deg]",
+                    )}
                   >
                     <div
                       className="grid h-14 w-14 place-items-center rounded-full ring-1 ring-white/10 transition-[transform,box-shadow,ring-color] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] motion-safe:group-hover:shadow-[0_14px_36px_-8px_rgba(255,255,255,0.22),0_6px_16px_-6px_rgba(0,0,0,0.65)] motion-safe:group-hover:ring-white/45"
@@ -159,8 +165,8 @@ export function BadgeCollection({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {attrazioni.map((a) => {
+        <div className="grid grid-cols-2 gap-3 [perspective:1000px] sm:grid-cols-3">
+          {attrazioni.map((a, idx) => {
             const unlocked = badgesSbloccati.includes(a.id);
             const stickerSrc = stickerForRideId(a.id);
 
@@ -174,7 +180,12 @@ export function BadgeCollection({
                   }
                   itemRefs.current.set(a.id, node);
                 }}
-                className="group relative rounded-2xl bg-zinc-950/60 p-3 ring-1 ring-white/10 backdrop-blur transition-[transform,box-shadow,ring-color] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] motion-safe:will-change-transform motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 motion-safe:hover:z-[2] motion-safe:hover:-translate-y-2 motion-safe:hover:scale-[1.035] motion-safe:hover:ring-white/35 motion-safe:hover:shadow-[0_22px_56px_-18px_rgba(255,255,255,0.12),0_12px_32px_-14px_rgba(0,0,0,0.75)]"
+                className={cn(
+                  "group relative rounded-2xl bg-zinc-950/60 p-3 ring-1 ring-white/10 backdrop-blur transition-[transform,box-shadow,ring-color] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] motion-safe:will-change-transform motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 motion-reduce:hover:rotate-0 motion-safe:hover:z-[2] motion-safe:hover:-translate-y-2 motion-safe:hover:scale-[1.035] motion-safe:hover:ring-white/35 motion-safe:hover:shadow-[0_22px_56px_-18px_rgba(255,255,255,0.12),0_12px_32px_-14px_rgba(0,0,0,0.75)]",
+                  idx % 2 === 0
+                    ? "motion-safe:hover:-rotate-[2.5deg]"
+                    : "motion-safe:hover:rotate-[2.5deg]",
+                )}
               >
                 <div className="flex flex-col items-center gap-2">
                   <img
