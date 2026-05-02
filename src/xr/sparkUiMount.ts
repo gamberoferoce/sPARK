@@ -274,7 +274,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   });
 
   uiRoot.scale.setScalar(Number.isFinite(dbgUiScale) ? dbgUiScale : XR_UI_SCALE_DEFAULT);
-  uiRoot.position.set(0, 0, Number.isFinite(dbgUiZ) ? dbgUiZ : -1.12);
+  uiRoot.position.set(0, 0, Number.isFinite(dbgUiZ) ? dbgUiZ : -1.0);
   uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
   uiRoot.visible = true;
 
