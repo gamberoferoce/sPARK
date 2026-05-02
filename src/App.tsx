@@ -366,7 +366,7 @@ function App() {
       setNotificaAttiva({
         poi: poiPremio,
         tipo: "attrazione",
-        motivoOverride: "Ritira il tuo premio all'uscita!",
+        motivoOverride: "Pick up your prize at the exit!",
       });
     }
     setConfettiOn(true);
@@ -675,15 +675,15 @@ function App() {
     if (notificaAttiva.motivoOverride) return notificaAttiva.motivoOverride;
     if (notificaAttiva.tipo === "attrazione") {
       const t = notificaAttiva.tipoAttrazione;
-      if (t === "post_pranzo") return "Giretto tranquillo post pranzo?";
-      if (t === "ultimo_giro") return "Ultimo giro sulla tua attrazione preferita?";
-      return "Coda sotto i 10 minuti!";
+      if (t === "post_pranzo") return "Easy stroll after lunch?";
+      if (t === "ultimo_giro") return "Last ride on your favorite attraction?";
+      return "Wait time under 10 minutes!";
     }
     const trigger = notificaAttiva.poi.trigger;
     if (Array.isArray(trigger) && trigger.includes("caffe"))
       return "All rides are crowded — coffee break?";
     if (Array.isArray(trigger) && trigger.includes("merenda")) return "Snack break nearby?";
-    return "Suggerimento ristoro.";
+    return "Dining suggestion.";
   }, [notificaAttiva]);
 
   function formatDistanza(metri: number) {
@@ -702,7 +702,7 @@ function App() {
   const fallbackPoiAttrazione: Poi = useMemo(
     () => ({
       id: "__debug_attrazione__",
-      nome: "Demo attrazione",
+      nome: "Demo ride",
       categoria: "attrazione",
       posizione: posFallback,
       notifica_attiva: false,
@@ -975,7 +975,7 @@ function App() {
               onClick={() => setDebugPanelOpen((v) => !v)}
             >
               Debug
-              <span className="text-xs font-normal text-zinc-400">{debugPanelOpen ? "Nascondi" : "Mostra"}</span>
+              <span className="text-xs font-normal text-zinc-400">{debugPanelOpen ? "Hide" : "Show"}</span>
             </button>
 
             {debugPanelOpen ? (
@@ -988,7 +988,7 @@ function App() {
                     onNotificaAttrazione(first);
                   }}
                 >
-                  Test notifica attrazione
+                  Test attraction notification
                 </button>
 
                 <button
@@ -1017,7 +1017,7 @@ function App() {
                     onNotificaAttrazione(first, "post_pranzo");
                   }}
                 >
-                  Test post pranzo
+                  Test post-lunch
                 </button>
 
                 <button
@@ -1032,7 +1032,7 @@ function App() {
                     onNotificaAttrazione(mock, "ultimo_giro");
                   }}
                 >
-                  Test ultimo giro
+                  Test last ride
                 </button>
 
                 <button
