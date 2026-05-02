@@ -1,5 +1,6 @@
 import type { Poi } from "@/types/poi";
 import { useEffect, useRef } from "react";
+import { DRIFT_FLOAT_ON_HOVER_CLASS } from "@/components/motion";
 import { cn } from "@/lib/utils";
 
 const STICKERS = [
@@ -150,7 +151,10 @@ export function BadgeCollection({
                       <img
                         src={stickerSrc}
                         alt=""
-                        className="h-12 w-12 object-contain transition-[transform,filter] duration-300 ease-out motion-safe:group-hover:scale-110 motion-safe:group-hover:drop-shadow-[0_4px_12px_rgba(255,255,255,0.35)]"
+                        className={cn(
+                          DRIFT_FLOAT_ON_HOVER_CLASS,
+                          "h-12 w-12 object-contain motion-safe:group-hover:drop-shadow-[0_4px_12px_rgba(255,255,255,0.35)]",
+                        )}
                         style={{ opacity: unlocked ? 0.9 : 0.35, filter: unlocked ? "none" : "grayscale(0.2)" }}
                         draggable={false}
                       />
@@ -191,7 +195,10 @@ export function BadgeCollection({
                   <img
                     src={stickerSrc}
                     alt=""
-                    className="h-[88px] w-full origin-center object-contain transition-[transform,filter] duration-300 ease-out motion-safe:group-hover:scale-105 motion-safe:group-hover:brightness-110"
+                    className={cn(
+                      DRIFT_FLOAT_ON_HOVER_CLASS,
+                      "h-[88px] w-full origin-center object-contain motion-safe:group-hover:brightness-110",
+                    )}
                     style={{ opacity: unlocked ? 0.9 : 0.35, filter: unlocked ? "none" : "grayscale(0.2)" }}
                     draggable={false}
                   />
