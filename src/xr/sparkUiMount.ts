@@ -6,6 +6,7 @@ import type { ProfiloUtente } from "@/components/Onboarding";
 import { calcolaDistanza } from "@/core/algorithm.js";
 import { PARCO } from "@/core/config.js";
 import { filterPoisByProfile } from "@/lib/poiFilter";
+import { applySimulatedServiceQueues } from "@/lib/simulatedServiceQueues";
 import type { Poi } from "@/types/poi";
 
 import {
@@ -869,6 +870,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     const next = isParcoOpenNow() === false;
     if (next !== parcoClosed) {
       parcoClosed = next;
+      rawPois = applySimulatedServiceQueues(rawPois, parcoClosed);
       build();
     }
   }
@@ -939,6 +941,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         });
       }
 
+      rawPois = applySimulatedServiceQueues(rawPois, parcoClosed);
+
       build();
     } catch {
       // ignore
@@ -953,6 +957,11 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     void fetchQueueTimes();
   }, 5 * 60 * 1000);
 
+  const serviceQueueSimTimer = window.setInterval(() => {
+    rawPois = applySimulatedServiceQueues(rawPois, parcoClosed);
+    build();
+  }, 90 * 1000);
+
   applySeasonParcoIfStale();
   void fetchQueueTimes();
 
@@ -965,6 +974,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
           if (bellById[p.id] === undefined) bellById[p.id] = p.notifica_attiva === true;
         }
         persistBellMap(bellById);
+        rawPois = applySimulatedServiceQueues(rawPois, parcoClosed);
         build();
         void fetchQueueTimes();
       }
@@ -1157,6 +1167,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     window.clearInterval(handlersTimer);
     window.clearInterval(seasonParcoTimer);
     window.clearInterval(queueTimesTimer);
+    window.clearInterval(serviceQueueSimTimer);
     const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
     s?.removeEventListener("selectstart", onSelectStart);
     s?.removeEventListener("selectend", onSelectEnd);
