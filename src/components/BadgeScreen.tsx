@@ -1,6 +1,7 @@
 import type { Poi } from "@/types/poi";
 import { BadgeCollection } from "@/components/BadgeCollection";
 import { BadgeScanner } from "@/components/BadgeScanner";
+import { FixedArtboard } from "@/components/FixedArtboard";
 import { cn } from "@/lib/utils";
 import { useMemo, useState } from "react";
 
@@ -31,7 +32,7 @@ export function BadgeScreen({ open, attrazioni, badgesSbloccati, onBadgeUnlocked
 
   return (
     <div
-      className="fixed left-1/2 top-14 z-[85] w-[min(50vw,32rem)] -translate-x-1/2 bg-transparent px-0 pt-0 pb-0 overflow-y-auto overflow-x-visible [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="fixed left-1/2 top-14 z-[85] -translate-x-1/2 bg-transparent px-0 pt-0 pb-0 overflow-y-auto overflow-x-visible [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       style={{
         // Show ~3.5 rows, then fade out (still scrollable).
         maxHeight: "min(70dvh, 620px)",
@@ -41,7 +42,8 @@ export function BadgeScreen({ open, attrazioni, badgesSbloccati, onBadgeUnlocked
           "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 72%, rgba(0,0,0,0) 100%)",
       }}
     >
-      <div className="mx-auto w-full max-w-lg">
+      <FixedArtboard>
+        <div className="mx-auto w-full max-w-lg">
         <nav className="grid w-full grid-cols-2 items-center justify-items-stretch px-4 pt-0.5" aria-label="Badge tabs">
           {tabs.map((t) => {
             const on = tab === t.id;
@@ -114,7 +116,8 @@ export function BadgeScreen({ open, attrazioni, badgesSbloccati, onBadgeUnlocked
             </div>
           </div>
         )}
-      </div>
+        </div>
+      </FixedArtboard>
     </div>
   );
 }
