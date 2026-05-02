@@ -266,7 +266,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     const el = document.createElement("div");
     el.id = "xr-html-debug";
     el.style.cssText =
-      "position:fixed;left:12px;top:12px;z-index:999999;max-width:min(92vw,520px);padding:10px 12px;border-radius:14px;background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.92);font:12px/1.35 system-ui;pointer-events:none";
+      "position:fixed;left:12px;top:12px;z-index:999999;max-width:min(92vw,520px);padding:10px 12px;border-radius:14px;background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.92);font:500 12px/1.35 Nunito,system-ui,sans-serif;letter-spacing:0.0125em;pointer-events:none";
     document.body.appendChild(el);
     return el;
   }
@@ -288,7 +288,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     depthTest: false,
     depthWrite: false,
     renderOrder: 1000,
-    fontFamily: "inter",
+    fontFamily: "Nunito",
     fontWeight: "medium",
   });
 

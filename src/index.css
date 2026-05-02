@@ -32,7 +32,8 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    /* Nunito + tracking leggero + peso medio: linee guida display tipo glasses (leggibilità su passthrough) */
+    @apply bg-background text-foreground font-sans antialiased font-medium tracking-[0.0125em];
   }
 }
 
