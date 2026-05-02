@@ -133,20 +133,23 @@ export function BadgeCollection({
                 const stickerSrc = stickerForRideId(a.id);
 
                 return (
-                  <div key={a.id} className="flex w-[88px] flex-col items-center">
+                  <div
+                    key={a.id}
+                    className="group flex w-[88px] flex-col items-center rounded-xl pb-1 pt-0.5 transition-[transform] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] motion-safe:will-change-transform motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-safe:hover:-translate-y-1 motion-safe:hover:scale-[1.06]"
+                  >
                     <div
-                      className="grid h-14 w-14 place-items-center rounded-full ring-1 ring-white/10"
+                      className="grid h-14 w-14 place-items-center rounded-full ring-1 ring-white/10 transition-[transform,box-shadow,ring-color] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] motion-safe:group-hover:shadow-[0_14px_36px_-8px_rgba(255,255,255,0.22),0_6px_16px_-6px_rgba(0,0,0,0.65)] motion-safe:group-hover:ring-white/45"
                       style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
                     >
                       <img
                         src={stickerSrc}
                         alt=""
-                        className="h-12 w-12 object-contain"
+                        className="h-12 w-12 object-contain transition-[transform,filter] duration-300 ease-out motion-safe:group-hover:scale-110 motion-safe:group-hover:drop-shadow-[0_4px_12px_rgba(255,255,255,0.35)]"
                         style={{ opacity: unlocked ? 0.9 : 0.35, filter: unlocked ? "none" : "grayscale(0.2)" }}
                         draggable={false}
                       />
                     </div>
-                    <div className="mt-2 text-center text-[11px] font-semibold leading-snug text-zinc-100 line-clamp-2">
+                    <div className="mt-2 text-center text-[11px] font-semibold leading-snug text-zinc-100 transition-colors duration-300 motion-safe:group-hover:text-white line-clamp-2">
                       {a.nome}
                     </div>
                   </div>
@@ -171,17 +174,17 @@ export function BadgeCollection({
                   }
                   itemRefs.current.set(a.id, node);
                 }}
-                className="rounded-2xl bg-zinc-950/60 p-3 ring-1 ring-white/10 backdrop-blur"
+                className="group relative rounded-2xl bg-zinc-950/60 p-3 ring-1 ring-white/10 backdrop-blur transition-[transform,box-shadow,ring-color] duration-300 ease-[cubic-bezier(0.34,1.35,0.64,1)] motion-safe:will-change-transform motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100 motion-safe:hover:z-[2] motion-safe:hover:-translate-y-2 motion-safe:hover:scale-[1.035] motion-safe:hover:ring-white/35 motion-safe:hover:shadow-[0_22px_56px_-18px_rgba(255,255,255,0.12),0_12px_32px_-14px_rgba(0,0,0,0.75)]"
               >
                 <div className="flex flex-col items-center gap-2">
                   <img
                     src={stickerSrc}
                     alt=""
-                    className="h-[88px] w-full object-contain"
+                    className="h-[88px] w-full origin-center object-contain transition-[transform,filter] duration-300 ease-out motion-safe:group-hover:scale-105 motion-safe:group-hover:brightness-110"
                     style={{ opacity: unlocked ? 0.9 : 0.35, filter: unlocked ? "none" : "grayscale(0.2)" }}
                     draggable={false}
                   />
-                  <div className="w-full text-center text-[12px] font-semibold leading-snug text-zinc-100 line-clamp-2">
+                  <div className="w-full text-center text-[12px] font-semibold leading-snug text-zinc-100 transition-colors duration-300 motion-safe:group-hover:text-white line-clamp-2">
                     {a.nome}
                   </div>
                 </div>
