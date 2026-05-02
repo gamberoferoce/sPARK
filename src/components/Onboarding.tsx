@@ -423,7 +423,7 @@ export function Onboarding({ onComplete }: Props) {
                       <div>
                         <div className="text-sm font-semibold text-zinc-100">Your diet, your rules.</div>
                         <p className="mt-0.5 text-xs text-zinc-400">
-                          We&apos;ll filter the rest out…
+                          We&apos;ll filter the rest out.
                         </p>
 
                         <div className="mt-4 space-y-3">
