@@ -9,6 +9,7 @@ import { valutaTuttiIPoi } from "@/core/notifications.js";
 import { PARCO } from "@/core/config.js";
 import type { Poi } from "@/types/poi";
 import { filterPoisByProfile } from "@/lib/poiFilter";
+import { applySimulatedServiceQueues } from "@/lib/simulatedServiceQueues";
 import { FixedArtboard } from "@/components/FixedArtboard";
 
 const ONBOARDING_BG_VIDEO = `${import.meta.env.BASE_URL}videos/bg.mp4`;
@@ -250,6 +251,8 @@ function App() {
 
   const [parcoClosed, setParcoClosed] = useState<boolean>(false);
   const lastQueueTimesOkRef = useRef<number>(0);
+  const parcoClosedRef = useRef(parcoClosed);
+  const prevParcoClosedForServicesRef = useRef(parcoClosed);
 
   function parseYmd(ymd: string) {
     const m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -288,6 +291,17 @@ function App() {
   useEffect(() => {
     poisRef.current = pois;
   }, [pois]);
+
+  useEffect(() => {
+    parcoClosedRef.current = parcoClosed;
+  }, [parcoClosed]);
+
+  // parcoClosed cambia da Queue-Times o da stagione/orario (timer 1 min se dati QT vecchi): sincronizza subito le code simulate
+  useEffect(() => {
+    if (prevParcoClosedForServicesRef.current === parcoClosed) return;
+    prevParcoClosedForServicesRef.current = parcoClosed;
+    setPois((prev) => applySimulatedServiceQueues(prev, parcoClosed));
+  }, [parcoClosed]);
 
   useEffect(() => {
     if (!profilo) return;
@@ -467,14 +481,17 @@ function App() {
           updates.set(poiId, Math.max(0, Math.round(wait)));
         }
 
-        if (updates.size === 0) return;
-        setPois((prev) =>
-          prev.map((p) => {
-            const next = updates.get(p.id);
-            if (next == null) return p;
-            return { ...p, coda_minuti: next };
-          }),
-        );
+        setPois((prev) => {
+          const withRides =
+            updates.size === 0
+              ? prev
+              : prev.map((p) => {
+                  const next = updates.get(p.id);
+                  if (next == null) return p;
+                  return { ...p, coda_minuti: next };
+                });
+          return applySimulatedServiceQueues(withRides, allClosed);
+        });
       } catch {
         // ignore
       }
@@ -515,24 +532,11 @@ function App() {
     return filterPoisByProfile(pois, profilo);
   }, [pois, profilo]);
 
-  // Simula code dinamiche: ogni 90 secondi aggiorna coda_minuti dei POI nello stato React
+  // Simula code ristoro·wc·dryer: solo con parco “aperto”; se tutte le attrazioni risultano chiuse, niente simulazione (coda -1)
   useEffect(() => {
-    function randomInt(min: number, max: number) {
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
-
     const id = window.setInterval(() => {
-      setPois((prev) =>
-        prev.map((p) => {
-          if (!p || !p.id) return p;
-          if (p.categoria === "ristoro") return { ...p, coda_minuti: randomInt(0, 25) };
-          if (p.categoria === "wc") return { ...p, coda_minuti: randomInt(0, 5) };
-          if (p.categoria === "asciugatura") return { ...p, coda_minuti: randomInt(0, 5) };
-          return p; // non toccare attrazioni (arrivano da Queue-Times)
-        }),
-      );
+      setPois((prev) => applySimulatedServiceQueues(prev, parcoClosedRef.current));
     }, 90 * 1000);
-
     return () => window.clearInterval(id);
   }, []);
 
