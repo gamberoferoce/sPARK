@@ -421,7 +421,7 @@ export function Onboarding({ onComplete }: Props) {
 
                     {step === 2 ? (
                       <div>
-                        <div className="text-sm font-semibold text-zinc-100">Your diet, your rules.</div>
+                        <div className="text-sm font-semibold text-zinc-100">Any dietary preferences?</div>
                         <p className="mt-0.5 text-xs text-zinc-400">
                           We&apos;ll filter the rest out.
                         </p>
