@@ -795,6 +795,33 @@ function App() {
         }}
       />
 
+      <div className="fixed bottom-3 left-3 z-[88] max-w-[min(92vw,320px)] pb-[env(safe-area-inset-bottom,0px)]">
+        <footer className="pointer-events-auto text-[10px] leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+          Based on Europa Park attractions. Real-time attraction queue data powered by{" "}
+          <a
+            href="https://queue-times.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline decoration-white/50 underline-offset-2 hover:text-white"
+          >
+            Queue-Times.com
+          </a>
+          . Food and services queue data are simulated.{" "}
+          <button
+            type="button"
+            className="inline p-0 text-left underline decoration-white/50 underline-offset-2 hover:text-white"
+            onClick={() => {
+              setLauncherKind("badge");
+              setPoiPanelOpen(false);
+              setBadgeScreenOpen(true);
+            }}
+          >
+            Click here
+          </button>{" "}
+          to open the badge gallery and save an attraction badge image to scan.
+        </footer>
+      </div>
+
       {poiPanelOpen ? (
         <div
           className="fixed left-1/2 top-14 z-40 overflow-visible transition-transform duration-300 ease-out"
