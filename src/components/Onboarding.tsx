@@ -371,9 +371,7 @@ export function Onboarding({ onComplete }: Props) {
               <div className="relative p-3">
                 <div
                   className={
-                    step === 0
-                      ? "flex flex-col items-center text-center"
-                      : "flex items-start gap-3"
+                    step === 0 ? "flex w-full items-start justify-center" : "flex items-start gap-3"
                   }
                 >
                   {step !== 0 ? (
@@ -381,24 +379,26 @@ export function Onboarding({ onComplete }: Props) {
                       <StepIcon className="h-4 w-4 text-zinc-200" />
                     </span>
                   ) : null}
-                  <div className={step === 0 ? "w-full max-w-md" : "min-w-0 flex-1"}>
+                  <div className={step === 0 ? "w-full max-w-lg" : "min-w-0 flex-1"}>
                     {step === 0 ? (
-                      <div className="flex w-full flex-col items-center text-center">
+                      <div className="flex w-full flex-row items-start gap-3 sm:gap-4">
                         <img
                           src="/spark-mascot.png"
                           alt=""
-                          className="mx-auto mb-1 block h-[clamp(7rem,28vw,10rem)] w-auto max-w-[min(100%,240px)] object-contain select-none pointer-events-none"
+                          className="shrink-0 h-[clamp(5.5rem,26vw,9.5rem)] w-auto max-w-[min(42vw,168px)] object-contain object-left select-none pointer-events-none"
                           draggable={false}
                         />
-                        <p className="text-xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-2xl">
-                          Welcome to sPARK
-                        </p>
-                        <p className="mt-1.5 text-sm font-medium leading-relaxed text-zinc-200">
-                          Your AR app for theme parks.
-                        </p>
-                        <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-200">
-                          I need Just a couple of details to personalize your experience.
-                        </p>
+                        <div className="min-w-0 flex-1 space-y-1.5 pt-0.5 text-left">
+                          <p className="text-xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-2xl">
+                            Welcome to sPARK
+                          </p>
+                          <p className="text-sm font-medium leading-relaxed text-zinc-200">
+                            Your AR app for theme parks.
+                          </p>
+                          <p className="pt-1 text-sm font-medium leading-relaxed text-zinc-200">
+                            I need Just a couple of details to personalize your experience.
+                          </p>
+                        </div>
                       </div>
                     ) : null}
 
