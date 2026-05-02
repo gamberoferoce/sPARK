@@ -371,7 +371,7 @@ export function Onboarding({ onComplete }: Props) {
               <div className="relative p-3">
                 <div
                   className={
-                    step === 0 ? "flex w-full items-start justify-center" : "flex items-start gap-3"
+                    step === 0 ? "flex w-full flex-col items-center justify-center" : "flex items-start gap-3"
                   }
                 >
                   {step !== 0 ? (
@@ -379,17 +379,17 @@ export function Onboarding({ onComplete }: Props) {
                       <StepIcon className="h-4 w-4 text-zinc-200" />
                     </span>
                   ) : null}
-                  <div className={step === 0 ? "w-full max-w-lg" : "min-w-0 flex-1"}>
+                  <div className={step === 0 ? "mx-auto w-full max-w-lg" : "min-w-0 flex-1"}>
                     {step === 0 ? (
-                      <div className="flex w-full flex-col gap-3 text-left">
-                        <div className="flex w-full flex-row items-end gap-3 sm:gap-4">
+                      <div className="flex w-full justify-center">
+                        <div className="flex w-fit max-w-full flex-row items-center gap-3 text-left sm:gap-4">
                           <img
                             src="/spark-mascot.png"
                             alt=""
                             className="shrink-0 h-[clamp(5.5rem,26vw,9.5rem)] w-auto max-w-[min(42vw,168px)] object-contain object-left select-none pointer-events-none"
                             draggable={false}
                           />
-                          <div className="min-w-0 flex-1 space-y-1.5">
+                          <div className="min-w-0 max-w-[min(52vw,260px)] space-y-1.5">
                             <p className="text-xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-2xl">
                               Welcome to sPARK
                             </p>
@@ -398,9 +398,6 @@ export function Onboarding({ onComplete }: Props) {
                             </p>
                           </div>
                         </div>
-                        <p className="text-sm font-medium leading-relaxed text-zinc-200">
-                          I need Just a couple of details to personalize your experience.
-                        </p>
                       </div>
                     ) : null}
 
@@ -482,32 +479,44 @@ export function Onboarding({ onComplete }: Props) {
         </main>
 
         <footer className="shrink-0 bg-transparent px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5">
-          <div className="flex w-full items-center justify-between gap-2">
-            <Button
-              variant="outline"
-              size="lg"
-              className="bg-transparent min-w-[96px]"
-              disabled={step === 0}
-              onClick={() => setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2 | 3)))}
-            >
-              Back
-            </Button>
-
-            {step < 3 ? (
+          {step === 0 ? (
+            <div className="flex w-full justify-center">
               <Button
                 variant="outline"
                 size="lg"
                 className="bg-transparent min-w-[96px]"
-                onClick={() => setStep((s) => ((s + 1) as 0 | 1 | 2 | 3))}
+                onClick={() => setStep(1)}
               >
                 Next
               </Button>
-            ) : (
-              <Button size="lg" className="min-w-[96px]" onClick={() => onComplete(profilo)}>
-                Start
+            </div>
+          ) : (
+            <div className="flex w-full items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                size="lg"
+                className="bg-transparent min-w-[96px]"
+                onClick={() => setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2 | 3)))}
+              >
+                Back
               </Button>
-            )}
-          </div>
+
+              {step < 3 ? (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="bg-transparent min-w-[96px]"
+                  onClick={() => setStep((s) => ((s + 1) as 0 | 1 | 2 | 3))}
+                >
+                  Next
+                </Button>
+              ) : (
+                <Button size="lg" className="min-w-[96px]" onClick={() => onComplete(profilo)}>
+                  Start
+                </Button>
+              )}
+            </div>
+          )}
         </footer>
       </div>
     </div>
