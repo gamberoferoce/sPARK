@@ -131,7 +131,7 @@ export function POIList({
   return (
     <div
       className={cn(fullBleed ? "-mx-4 w-[calc(100%+2rem)] max-w-none" : "w-full", "pb-28 antialiased")}
-      style={{ backgroundColor: BG, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif" }}
+      style={{ backgroundColor: BG }}
       onPointerDown={(e) => {
         const target = e.target as HTMLElement | null;
         // Non iniziare swipe se stai interagendo con un bottone (tab, campanella, ecc.)
