@@ -387,16 +387,16 @@ export function Onboarding({ onComplete }: Props) {
                         <img
                           src="/spark-mascot.png"
                           alt=""
-                          className="mx-auto mb-4 block h-[clamp(7rem,28vw,10rem)] w-auto max-w-[min(100%,240px)] object-contain select-none pointer-events-none"
+                          className="mx-auto mb-1 block h-[clamp(7rem,28vw,10rem)] w-auto max-w-[min(100%,240px)] object-contain select-none pointer-events-none"
                           draggable={false}
                         />
                         <p className="text-xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-2xl">
                           Welcome to sPARK
                         </p>
-                        <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-200">
+                        <p className="mt-1.5 text-sm font-medium leading-relaxed text-zinc-200">
                           Your AR app for theme parks.
                         </p>
-                        <p className="mt-3 text-sm font-medium leading-relaxed text-zinc-200">
+                        <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-200">
                           I need Just a couple of details to personalize your experience.
                         </p>
                       </div>
