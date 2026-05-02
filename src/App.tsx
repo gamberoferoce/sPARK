@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import { POIList } from "@/components/POIList";
 import { Onboarding, type ProfiloUtente } from "@/components/Onboarding";
 import { NotificationPopup } from "@/components/NotificationPopup";
@@ -1007,6 +1008,7 @@ function App() {
           </div>
         </div>
       ) : null}
+      <Analytics />
     </main>
   );
 }
