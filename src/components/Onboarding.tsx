@@ -370,18 +370,9 @@ export function Onboarding({ onComplete }: Props) {
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
             <div className="mx-auto flex min-h-full w-full max-w-full flex-col justify-center py-2">
               <div className="relative p-3">
-                <div
-                  className={
-                    step === 0 ? "flex w-full flex-col items-center justify-center" : "flex items-start gap-3"
-                  }
-                >
-                  {step !== 0 ? (
-                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-transparent ring-1 ring-white">
-                      <StepIcon className="h-4 w-4 text-zinc-200" />
-                    </span>
-                  ) : null}
-                  <div className={step === 0 ? "mx-auto w-full max-w-lg" : "min-w-0 flex-1"}>
-                    {step === 0 ? (
+                {step === 0 ? (
+                  <div className="flex w-full flex-col items-center justify-center">
+                    <div className="mx-auto w-full max-w-lg">
                       <div className="flex w-full justify-center">
                         <div className="flex w-fit max-w-full flex-row items-center gap-3 text-left sm:gap-4">
                           <img
@@ -402,9 +393,16 @@ export function Onboarding({ onComplete }: Props) {
                           </div>
                         </div>
                       </div>
-                    ) : null}
+                    </div>
+                  </div>
+                ) : null}
 
-                    {step === 1 ? (
+                {step === 1 ? (
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-transparent ring-1 ring-white">
+                      <StepIcon className="h-4 w-4 text-zinc-200" />
+                    </span>
+                    <div className="min-w-0 flex-1">
                       <div>
                         <div className="text-sm font-semibold text-zinc-100">Are you tall enough?</div>
                         <p className="mt-0.5 text-xs text-zinc-400">
@@ -417,71 +415,83 @@ export function Onboarding({ onComplete }: Props) {
                           active={step === 1}
                         />
                       </div>
-                    ) : null}
+                    </div>
+                  </div>
+                ) : null}
 
-                    {step === 2 ? (
-                      <div>
+                {step === 2 ? (
+                  <div className="flex w-full flex-col">
+                    <div className="flex items-start gap-3">
+                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-transparent ring-1 ring-white">
+                        <StepIcon className="h-4 w-4 text-zinc-200" />
+                      </span>
+                      <div className="min-w-0 flex-1">
                         <div className="text-sm font-semibold text-zinc-100">Any dietary preferences?</div>
                         <p className="mt-0.5 text-xs text-zinc-400">
                           We&apos;ll filter the rest out.
                         </p>
-
-                        <div className="mt-4 space-y-3">
-                          {ALL_DIETE.map((d) => {
-                            const on = diete[d];
-                            return (
-                              <button
-                                key={d}
-                                type="button"
-                                aria-pressed={on}
-                                onClick={() => setDiete((prev) => ({ ...prev, [d]: !prev[d] }))}
-                                className={[
-                                  "w-full rounded-[3rem] px-3 py-3 text-left text-sm font-semibold capitalize ring-1 transition-colors",
-                                  on
-                                    ? "bg-white/10 text-zinc-100 ring-white/20"
-                                    : "bg-zinc-900/40 text-zinc-400 ring-white/10 hover:bg-white/5 hover:text-zinc-200",
-                                ].join(" ")}
-                              >
-                                {DIETA_LABEL_EN[d]}
-                              </button>
-                            );
-                          })}
-                        </div>
                       </div>
-                    ) : null}
+                    </div>
+                    <div className="mt-4 grid w-full grid-cols-3 gap-2">
+                      {ALL_DIETE.map((d) => {
+                        const on = diete[d];
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => setDiete((prev) => ({ ...prev, [d]: !prev[d] }))}
+                            className={[
+                              "flex min-h-[44px] w-full items-center justify-center rounded-[3rem] px-1.5 py-2 text-center text-[11px] font-semibold capitalize leading-tight ring-1 transition-colors sm:px-2 sm:text-xs sm:leading-snug",
+                              on
+                                ? "bg-white/10 text-zinc-100 ring-white/20"
+                                : "bg-zinc-900/40 text-zinc-400 ring-white/10 hover:bg-white/5 hover:text-zinc-200",
+                            ].join(" ")}
+                          >
+                            {DIETA_LABEL_EN[d]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
 
-                    {step === 3 ? (
-                      <div>
+                {step === 3 ? (
+                  <div className="flex w-full flex-col">
+                    <div className="flex items-start gap-3">
+                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-transparent ring-1 ring-white">
+                        <StepIcon className="h-4 w-4 text-zinc-200" />
+                      </span>
+                      <div className="min-w-0 flex-1">
                         <div className="text-sm font-semibold text-zinc-100">
                           How much adrenaline can you handle?
                         </div>
                         <p className="mt-0.5 text-xs text-zinc-400">Pick as many as you like</p>
-
-                        <div className="mt-4 space-y-3">
-                          {ALL_INTENSITA.map((a) => {
-                            const on = intensita[a];
-                            return (
-                              <button
-                                key={a}
-                                type="button"
-                                aria-pressed={on}
-                                onClick={() => setIntensita((prev) => ({ ...prev, [a]: !prev[a] }))}
-                                className={[
-                                  "w-full rounded-[3rem] px-3 py-3 text-left text-sm font-semibold capitalize ring-1 transition-colors",
-                                  on
-                                    ? "bg-white/10 text-zinc-100 ring-white/20"
-                                    : "bg-zinc-900/40 text-zinc-400 ring-white/10 hover:bg-white/5 hover:text-zinc-200",
-                                ].join(" ")}
-                              >
-                                {INTENSITA_LABEL_EN[a]}
-                              </button>
-                            );
-                          })}
-                        </div>
                       </div>
-                    ) : null}
+                    </div>
+                    <div className="mt-4 grid w-full grid-cols-3 gap-2">
+                      {ALL_INTENSITA.map((a) => {
+                        const on = intensita[a];
+                        return (
+                          <button
+                            key={a}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => setIntensita((prev) => ({ ...prev, [a]: !prev[a] }))}
+                            className={[
+                              "flex min-h-[44px] w-full items-center justify-center rounded-[3rem] px-1.5 py-2 text-center text-[11px] font-semibold capitalize leading-tight ring-1 transition-colors sm:px-2 sm:text-xs sm:leading-snug",
+                              on
+                                ? "bg-white/10 text-zinc-100 ring-white/20"
+                                : "bg-zinc-900/40 text-zinc-400 ring-white/10 hover:bg-white/5 hover:text-zinc-200",
+                            ].join(" ")}
+                          >
+                            {INTENSITA_LABEL_EN[a]}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                ) : null}
               </div>
             </div>
           </div>
