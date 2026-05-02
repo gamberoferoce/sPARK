@@ -377,7 +377,8 @@ export function Onboarding({ onComplete }: Props) {
                     {step === 0 ? (
                       <div>
                         <p className="text-sm font-medium leading-relaxed text-zinc-200">
-                          Just a couple of details to personalize your experience.
+                          Welcome to sPARK, your AR app for theme parks. I need Just a couple of details to personalize
+                          your experience.
                         </p>
                       </div>
                     ) : null}
