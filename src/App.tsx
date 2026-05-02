@@ -12,6 +12,8 @@ import { enterAR, exitAR } from "@/xr/iwsdk";
 import { filterPoisByProfile } from "@/lib/poiFilter";
 import { FixedArtboard } from "@/components/FixedArtboard";
 
+const ONBOARDING_BG_VIDEO = `${import.meta.env.BASE_URL}videos/onboarding-vegetation.mp4`;
+
 function LauncherButton({
   kind,
   onChangeKind,
@@ -697,7 +699,24 @@ function App() {
   );
 
   if (!profilo) {
-    return <Onboarding onComplete={setProfilo} />;
+    return (
+      <div className="relative isolate min-h-[100dvh] w-full">
+        {/* Avoid fixed -z-10 as #root child (can paint behind root → only body black). */}
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-black" aria-hidden>
+          <video
+            className="absolute inset-0 h-full w-full object-cover opacity-90"
+            src={ONBOARDING_BG_VIDEO}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+          />
+          <div className="absolute inset-0 bg-black/35" />
+        </div>
+        <Onboarding onComplete={setProfilo} />
+      </div>
+    );
   }
 
   return (
