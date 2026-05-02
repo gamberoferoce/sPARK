@@ -39,6 +39,13 @@ function stickerForRideId(id: string) {
   return STICKERS[hashString(id) % STICKERS.length]!;
 }
 
+/** Desktop uses CSS `invert(1)` on black SVGs; UIKit moltiplica la texture → serve SVG bianco. */
+function xrIconSvg(iconsPath: string): string {
+  if (!iconsPath.startsWith("/icons/") || !iconsPath.endsWith(".svg")) return iconsPath;
+  const base = iconsPath.slice("/icons/".length);
+  return `/icons/xr/${base}`;
+}
+
 function formatDistanza(metri: number) {
   if (!Number.isFinite(metri)) return "—";
   if (metri < 1000) return `${Math.round(metri)} m`;
@@ -343,7 +350,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       justifyContent: "center",
     });
     (btn as unknown as Object3D).userData = { xrUi: { k: "launcher" } satisfies XrUi };
-    const src = launcherKind === "badge" ? "/icons/tab-badges.png" : "/icons/tab-cards.svg";
+    const src = launcherKind === "badge" ? "/icons/tab-badges.png" : xrIconSvg("/icons/tab-cards.svg");
     btn.add(
       new UiImage({
         src,
@@ -493,7 +500,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       alignItems: "center",
       justifyContent: "center",
     });
-    const iconSrc =
+    const iconSrc = xrIconSvg(
       p.categoria === "attrazione"
         ? "/icons/ride.svg"
         : p.categoria === "ristoro"
@@ -502,7 +509,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
             ? "/icons/wc.svg"
             : p.categoria === "asciugatura"
               ? "/icons/dryer.svg"
-              : "/icons/tab-cards.svg";
+              : "/icons/tab-cards.svg",
+    );
     iconWrap.add(
       new UiImage({
         src: iconSrc,
