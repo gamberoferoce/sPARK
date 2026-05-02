@@ -11,7 +11,7 @@ import type { Poi } from "@/types/poi";
 import { filterPoisByProfile } from "@/lib/poiFilter";
 import { FixedArtboard } from "@/components/FixedArtboard";
 
-const ONBOARDING_BG_VIDEO = `${import.meta.env.BASE_URL}videos/onboarding-vegetation.mp4`;
+const ONBOARDING_BG_VIDEO = `${import.meta.env.BASE_URL}videos/bg.mp4`;
 
 function LauncherButton({
   kind,
