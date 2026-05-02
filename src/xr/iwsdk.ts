@@ -146,9 +146,6 @@ async function getWorld() {
 function startWorldSpaceDesktopLikeUi(world: World) {
   stopWorldUi?.();
   stopWorldUi = mountDesktopLikeSparkUi(world, {
-    onExit: () => {
-      void exitAR();
-    },
     xrDomOverlayFallbackHint,
   });
 }

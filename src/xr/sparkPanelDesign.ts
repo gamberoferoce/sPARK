@@ -28,7 +28,6 @@ export const XR_PANEL = {
   fsBody: 15,
   fsSmall: 12,
   fsDistance: 12,
-  exitRowH: 40,
 } as const;
 
 /** Inner column width (horizontal padding like desktop px-4). */

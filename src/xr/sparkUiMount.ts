@@ -151,7 +151,6 @@ type BadgeSub = "galleria" | "scansiona";
 
 type XrUi =
   | { k: "launcher" }
-  | { k: "exit" }
   | { k: "poiCat"; cat: PoiCat }
   | { k: "badgeSub"; sub: BadgeSub }
   | { k: "bell"; id: string }
@@ -202,7 +201,6 @@ function parseFloatParam(name: string, fallback: number) {
 }
 
 export type MountSparkUiOpts = {
-  onExit: () => void | Promise<void>;
   xrDomOverlayFallbackHint?: string | null;
 };
 
@@ -253,7 +251,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     return el;
   }
 
-  const stackH = XR_PANEL.launcherSlot + XR_PANEL.gapLauncherSheet + XR_CONTENT_H + XR_PANEL.gapSection + XR_PANEL.exitRowH;
+  const stackH = XR_PANEL.launcherSlot + XR_PANEL.gapLauncherSheet + XR_CONTENT_H;
 
   const uiRoot = new Container({
     width: XR_PANEL.w,
@@ -299,41 +297,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     gap: 10,
   });
 
-  const exitSlot = new Container({
-    width: XR_INNER_W,
-    height: XR_PANEL.exitRowH,
-    flexShrink: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  });
-
   uiRoot.add(launcherSlot);
   uiRoot.add(sheetSlot);
-  uiRoot.add(exitSlot);
-
-  const exitBtn = new Container({
-    paddingLeft: 18,
-    paddingRight: 18,
-    paddingTop: 10,
-    paddingBottom: 10,
-    borderRadius: 999,
-    backgroundColor: "rgba(0,0,0,0.42)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  });
-  (exitBtn as unknown as Object3D).userData = { xrUi: { k: "exit" } satisfies XrUi };
-  exitBtn.add(
-    new Text({
-      text: "Exit AR",
-      fontSize: XR_PANEL.fsSmall + 1,
-      color: "rgba(244,244,245,0.95)",
-    }),
-  );
-  exitSlot.add(exitBtn);
 
   function poiFiltered(): Poi[] {
     if (!profilo) return [];
@@ -1049,9 +1014,6 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
 
   function handleTap(u: XrUi) {
     switch (u.k) {
-      case "exit":
-        void opts.onExit();
-        return;
       case "poiCat":
         poiCat = u.cat;
         build();
