@@ -214,6 +214,7 @@ export type MountSparkUiOpts = {
 export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): () => void {
   const debug = flagParam("xrDbg");
   const dbgUiScale = parseFloatParam("xrUiScale", NaN);
+  const dbgUiY = parseFloatParam("xrUiY", NaN);
   const dbgUiZ = parseFloatParam("xrUiZ", NaN);
   const uiProbe = flagParam("xrUiProbe");
   const followCam = !flagParam("xrWorldUi");
@@ -279,8 +280,9 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   });
 
   uiRoot.scale.setScalar(Number.isFinite(dbgUiScale) ? dbgUiScale : XR_UI_SCALE_DEFAULT);
-  /* ~75 cm: distanza comoda “a braccio teso” (override: ?xrUiZ=) */
-  uiRoot.position.set(0, 0, Number.isFinite(dbgUiZ) ? dbgUiZ : -0.75);
+  /* Camera locale: Y negativo = più in basso nel campo visivo (override ?xrUiY=). Z ~75 cm davanti (?xrUiZ=). */
+  const uiYDefault = -0.1;
+  uiRoot.position.set(0, Number.isFinite(dbgUiY) ? dbgUiY : uiYDefault, Number.isFinite(dbgUiZ) ? dbgUiZ : -0.75);
   uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
   uiRoot.visible = true;
 
@@ -1132,7 +1134,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         `XR HUD\nsheet: ${sheetOpen ? launcherKind : "closed"} | poiTab: ${poiCat}\n` +
         `parcoClosed: ${parcoClosed ? "yes" : "no"} | queueAge: ${lastQueueTimesOk ? `${Math.round((Date.now() - lastQueueTimesOk) / 1000)}s` : "never"}\n` +
         `pois: ${rawPois.length}\n` +
-        `ui.scale: ${uiRoot.scale.x.toFixed(6)} z: ${uiRoot.position.z.toFixed(3)}\n` +
+        `ui.scale: ${uiRoot.scale.x.toFixed(6)} y: ${uiRoot.position.y.toFixed(3)} z: ${uiRoot.position.z.toFixed(3)}\n` +
         `cam: ${cam.position.x.toFixed(2)},${cam.position.y.toFixed(2)},${cam.position.z.toFixed(2)} | ui.world: ${wx.x.toFixed(2)},${wx.y.toFixed(2)},${wx.z.toFixed(2)}`;
     }
   };
