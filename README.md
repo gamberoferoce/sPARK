@@ -1,8 +1,14 @@
-# React + TypeScript + Vite
+# sPARK XR
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Production:** [s-park-xr.vercel.app](https://s-park-xr.vercel.app) (Vercel project **s-park-xr**, branch **master**).
 
-Currently, two official plugins are available:
+Each build gets its own URL (e.g. `https://s-park-jtkz4h5tz-giulias-projects-957c6763.vercel.app`); the stable alias above always tracks latest production.
+
+**This folder** targets the XR/WebXR app only. The desktop-only bundle lives under Vercel project **`s-park`** (branch `desktop-stable-pre-webxr`) and is no longer developed here.
+
+---
+
+Stack: React + TypeScript + Vite. Official plugins:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
