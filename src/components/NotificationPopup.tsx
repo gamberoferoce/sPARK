@@ -71,7 +71,7 @@ export function NotificationPopup({
               className={cn("bg-transparent", isCaffe ? "w-full min-w-0 justify-center" : "")}
               onClick={close}
             >
-              Non ora
+              Not now
             </Button>
           </div>
         </div>

@@ -89,7 +89,7 @@ export function BadgeScanner({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const Detector = (aruco as any).AR?.Detector;
         if (!Detector) {
-          setError("Impossibile inizializzare il detector ArUco.");
+          setError("Could not initialize the ArUco detector.");
           return;
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
