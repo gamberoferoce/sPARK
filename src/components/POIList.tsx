@@ -169,10 +169,9 @@ export function POIList({
           {/* Spazio sotto tab prima della lista */}
           <div className="h-4" aria-hidden />
 
-          {/* Lista (scroll verticale) */}
+          {/* Lista (scroll verticale): stesso concetto di BadgeScreen — mask sul contenitore, non overlay nero */}
           <div
             className={cn(
-              "relative",
               fullBleed
                 ? "overflow-visible"
                 : "overflow-x-hidden overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
@@ -182,6 +181,15 @@ export function POIList({
             style={{
               backgroundColor: BG,
               maxHeight: !fullBleed && panelMaxH ? `${panelMaxH}px` : undefined,
+              ...(!fullBleed
+                ? {
+                    // Show most of the list, then fade visibility at bottom (still scrollable) — see BadgeScreen.
+                    WebkitMaskImage:
+                      "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 72%, rgba(0,0,0,0) 100%)",
+                    maskImage:
+                      "linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 72%, rgba(0,0,0,0) 100%)",
+                  }
+                : {}),
             }}
           >
             <div className={cn(!fullBleed && "-translate-x-[96px] transform-gpu")}>
@@ -374,17 +382,6 @@ export function POIList({
           })}
               </ul>
             </div>
-
-        {/* Bottom fade: hints mouse-wheel scroll (no mask to avoid clipping the lateral slide) */}
-        {!fullBleed ? (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute bottom-0 left-0 right-0 h-12"
-            style={{
-              background: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)",
-            }}
-          />
-        ) : null}
       </div>
 
       {sorted.length === 0 ? (
