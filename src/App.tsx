@@ -205,7 +205,6 @@ function App() {
     tipoAttrazione?: "attrazione" | "post_pranzo" | "ultimo_giro";
     motivoOverride?: string;
   } | null>(null);
-  const [debugPopup, setDebugPopup] = useState<null | "attrazione" | "caffe">(null);
   const [debugPanelOpen, setDebugPanelOpen] = useState(false);
   const [poiPanelOpen, setPoiPanelOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
@@ -664,19 +663,6 @@ function App() {
     return `${notificaAttiva.poi.nome} • ${formatDistanza(d)}`;
   }, [notificaAttiva, posUtente, posFallback]);
 
-  const poiDebugAttrazione = useMemo(() => {
-    const fromFiltered = poisFiltrati.find((p) => p.categoria === "attrazione");
-    if (fromFiltered) return fromFiltered;
-    return pois.find((p) => p.categoria === "attrazione") ?? null;
-  }, [poisFiltrati, pois]);
-
-  const poiDebugCaffe = useMemo(() => {
-    const pick = (list: Poi[]) =>
-      list.find((p) => p.categoria === "ristoro" && Array.isArray(p.trigger) && p.trigger.includes("caffe")) ??
-      null;
-    return pick(poisFiltrati) ?? pick(pois);
-  }, [poisFiltrati, pois]);
-
   const fallbackPoiAttrazione: Poi = useMemo(
     () => ({
       id: "__debug_attrazione__",
@@ -945,45 +931,6 @@ function App() {
           </div>
         </div>
       ) : null}
-
-      <div className="fixed bottom-3 left-3 z-40 flex flex-col gap-2">
-        <button
-          type="button"
-          className="rounded-full border border-white/20 bg-zinc-900/90 px-3 py-1.5 text-left text-[11px] font-semibold text-zinc-200 shadow-lg backdrop-blur"
-          onClick={() => setDebugPopup("attrazione")}
-        >
-          DBG ride popup
-        </button>
-        <button
-          type="button"
-          className="rounded-full border border-white/20 bg-zinc-900/90 px-3 py-1.5 text-left text-[11px] font-semibold text-zinc-200 shadow-lg backdrop-blur"
-          onClick={() => setDebugPopup("caffe")}
-        >
-          DBG coffee popup
-        </button>
-      </div>
-
-      <NotificationPopup
-        open={debugPopup === "attrazione"}
-        poi={poiDebugAttrazione ?? fallbackPoiAttrazione}
-        motivo="Simulazione: coda favorevole — momento buono per entrare in attrazione."
-        onClose={() => setDebugPopup(null)}
-        onNaviga={(p) => {
-          if (import.meta.env.DEV) console.log("[DEBUG][naviga attrazione]", p);
-          setDebugPopup(null);
-        }}
-      />
-      <NotificationPopup
-        open={debugPopup === "caffe"}
-        variant="caffe"
-        poi={poiDebugCaffe ?? fallbackPoiCaffe}
-        motivo="Coffee trigger simulation: suggested break near you."
-        onClose={() => setDebugPopup(null)}
-        onNaviga={(p) => {
-          if (import.meta.env.DEV) console.log("[DEBUG][naviga caffe]", p);
-          setDebugPopup(null);
-        }}
-      />
     </main>
   );
 }
