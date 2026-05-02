@@ -64,3 +64,29 @@ body {
   /* Passthrough can wash out fully transparent UIs */
   background: rgba(0, 0, 0, 0.28);
 }
+
+/* Onboarding mascot — CSS-only loop (no Framer); OK in DOM / XR overlay */
+@keyframes spark-mascot-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-1.25deg) scale(1);
+  }
+  33% {
+    transform: translate3d(0, -6px, 0) rotate(1.75deg) scale(1.025);
+  }
+  66% {
+    transform: translate3d(0, -3px, 0) rotate(0.25deg) scale(1.008);
+  }
+}
+
+.spark-mascot-motion {
+  animation: spark-mascot-drift 3.8s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spark-mascot-motion {
+    animation: none;
+    will-change: auto;
+  }
+}

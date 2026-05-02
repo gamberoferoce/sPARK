@@ -386,7 +386,7 @@ export function Onboarding({ onComplete }: Props) {
                           <img
                             src="/spark-mascot.png"
                             alt=""
-                            className="shrink-0 h-[clamp(5.5rem,26vw,9.5rem)] w-auto max-w-[min(42vw,168px)] object-contain object-left select-none pointer-events-none"
+                            className="spark-mascot-motion shrink-0 h-[clamp(5.5rem,26vw,9.5rem)] w-auto max-w-[min(42vw,168px)] object-contain object-left select-none pointer-events-none"
                             draggable={false}
                           />
                           <div className="min-w-0 max-w-[min(52vw,260px)] space-y-1.5">
