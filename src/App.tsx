@@ -9,7 +9,7 @@ import { valutaTuttiIPoi } from "@/core/notifications.js";
 import { PARCO } from "@/core/config.js";
 import type { Poi } from "@/types/poi";
 import { filterPoisByProfile } from "@/lib/poiFilter";
-import { applySimulatedServiceQueues } from "@/lib/simulatedServiceQueues";
+import { applySimulatedServiceQueues, SERVICE_QUEUE_FREEZE_ATTR_CLOSED_RATIO } from "@/lib/simulatedServiceQueues";
 import { FixedArtboard } from "@/components/FixedArtboard";
 
 const ONBOARDING_BG_VIDEO = `${import.meta.env.BASE_URL}videos/bg.mp4`;
@@ -249,10 +249,10 @@ function App() {
     return null;
   });
 
-  const [parcoClosed, setParcoClosed] = useState<boolean>(false);
+  const [freezeServiceQueues, setFreezeServiceQueues] = useState<boolean>(false);
   const lastQueueTimesOkRef = useRef<number>(0);
-  const parcoClosedRef = useRef(parcoClosed);
-  const prevParcoClosedForServicesRef = useRef(parcoClosed);
+  const freezeServiceQueuesRef = useRef(freezeServiceQueues);
+  const prevFreezeServiceQueuesRef = useRef(freezeServiceQueues);
   const queueTimesRefreshRef = useRef<(() => void) | null>(null);
 
   function parseYmd(ymd: string) {
@@ -294,15 +294,14 @@ function App() {
   }, [pois]);
 
   useEffect(() => {
-    parcoClosedRef.current = parcoClosed;
-  }, [parcoClosed]);
+    freezeServiceQueuesRef.current = freezeServiceQueues;
+  }, [freezeServiceQueues]);
 
-  // parcoClosed cambia da Queue-Times o da stagione/orario (timer 1 min se dati QT vecchi): sincronizza subito le code simulate
   useEffect(() => {
-    if (prevParcoClosedForServicesRef.current === parcoClosed) return;
-    prevParcoClosedForServicesRef.current = parcoClosed;
-    setPois((prev) => applySimulatedServiceQueues(prev, parcoClosed));
-  }, [parcoClosed]);
+    if (prevFreezeServiceQueuesRef.current === freezeServiceQueues) return;
+    prevFreezeServiceQueuesRef.current = freezeServiceQueues;
+    setPois((prev) => applySimulatedServiceQueues(prev, freezeServiceQueues));
+  }, [freezeServiceQueues]);
 
   useEffect(() => {
     if (!profilo) return;
@@ -327,8 +326,8 @@ function App() {
       // If Queue-Times is updating, treat it as source of truth for open/closed.
       if (Date.now() - lastQueueTimesOkRef.current < 10 * 60 * 1000) return;
       const closed = isParcoOpenNow(new Date()) === false;
-      parcoClosedRef.current = closed;
-      setParcoClosed(closed);
+      freezeServiceQueuesRef.current = closed;
+      setFreezeServiceQueues(closed);
     };
     tick();
     const id = window.setInterval(tick, 60 * 1000);
@@ -396,7 +395,10 @@ function App() {
       .then((data) => {
         if (cancelled) return;
         const loaded = Array.isArray(data) ? (data as Poi[]) : [];
-        setPois(loaded);
+        const merged = applySimulatedServiceQueues(loaded, freezeServiceQueuesRef.current);
+        poisRef.current = merged;
+        setPois(merged);
+        queueTimesRefreshRef.current?.();
         const initial: Record<string, boolean> = {};
         try {
           const raw = localStorage.getItem("sparkBellById");
@@ -454,11 +456,7 @@ function App() {
         }
         if (rides.length === 0) return;
 
-        // Queue-Times open/closed truth: if all rides are closed, treat park as closed.
         lastQueueTimesOkRef.current = Date.now();
-        const allClosed = rides.every((r) => r && r.is_open === false);
-        parcoClosedRef.current = allClosed;
-        setParcoClosed(allClosed);
 
         const currentPois = poisRef.current;
         const poiByNameKey = new Map<string, string>();
@@ -466,6 +464,24 @@ function App() {
           if (!p?.id || typeof p.nome !== "string") continue;
           poiByNameKey.set(normalizeName(p.nome), p.id);
         }
+
+        let attrazioniQt = 0;
+        let attrazioniChiuseQt = 0;
+        for (const r of rides) {
+          const name = typeof r?.name === "string" ? (r.name as string) : "";
+          if (!name) continue;
+          const poiId = poiByNameKey.get(normalizeRideName(name));
+          if (!poiId) continue;
+          const poi = currentPois.find((x) => x.id === poiId);
+          if (!poi || poi.categoria !== "attrazione") continue;
+          attrazioniQt++;
+          if (r?.is_open === false) attrazioniChiuseQt++;
+        }
+        const freezeSvc =
+          attrazioniQt > 0 &&
+          attrazioniChiuseQt / attrazioniQt >= SERVICE_QUEUE_FREEZE_ATTR_CLOSED_RATIO;
+        freezeServiceQueuesRef.current = freezeSvc;
+        setFreezeServiceQueues(freezeSvc);
 
         const updates = new Map<string, number>();
         for (const r of rides) {
@@ -494,7 +510,7 @@ function App() {
                   if (next == null) return p;
                   return { ...p, coda_minuti: next };
                 });
-          return applySimulatedServiceQueues(withRides, allClosed);
+          return applySimulatedServiceQueues(withRides, freezeSvc);
         });
       } catch {
         // ignore
@@ -542,10 +558,9 @@ function App() {
     return filterPoisByProfile(pois, profilo);
   }, [pois, profilo]);
 
-  // Simula code ristoro·wc·dryer: solo con parco “aperto”; se tutte le attrazioni risultano chiuse, niente simulazione (coda -1)
   useEffect(() => {
     const id = window.setInterval(() => {
-      setPois((prev) => applySimulatedServiceQueues(prev, parcoClosedRef.current));
+      setPois((prev) => applySimulatedServiceQueues(prev, freezeServiceQueuesRef.current));
     }, 90 * 1000);
     return () => window.clearInterval(id);
   }, []);
@@ -792,7 +807,7 @@ function App() {
                 pois={poisFiltrati}
                 posUtente={posUtente ?? posFallback}
                 bellById={bellById}
-                parcoClosed={parcoClosed}
+                freezeServiceQueues={freezeServiceQueues}
                 onToggleBell={(id) => {
                   setBellById((prev) => ({ ...prev, [id]: !(prev[id] === true) }));
                   setPois((prev) =>

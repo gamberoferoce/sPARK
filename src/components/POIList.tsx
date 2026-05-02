@@ -11,7 +11,7 @@ type Props = {
   onNaviga: (poi: Poi) => void;
   calcolaDistanzaM: (poiPos: Poi["posizione"]) => number;
   fullBleed?: boolean;
-  parcoClosed?: boolean;
+  freezeServiceQueues?: boolean;
 };
 
 type Tab = "attrazione" | "ristoro" | "servizi";
@@ -49,7 +49,7 @@ export function POIList({
   onNaviga,
   calcolaDistanzaM,
   fullBleed = true,
-  parcoClosed = false,
+  freezeServiceQueues = false,
 }: Props) {
   const [tab, setTab] = useState<Tab>("attrazione");
   const swipeRef = useRef<{ x: number; y: number; pointerType: string } | null>(null);
@@ -204,14 +204,16 @@ export function POIList({
           const coda = Number(p.coda_minuti);
           const hasCoda = Number.isFinite(coda);
           const bellOn = bellById[p.id] === true;
-          const isClosed = parcoClosed || coda === -1;
+          const isService =
+            p.categoria === "ristoro" || p.categoria === "wc" || p.categoria === "asciugatura";
+          const isClosed = isService ? freezeServiceQueues || coda === -1 : coda === -1;
           const showWait =
             (tab === "attrazione" ||
               tab === "ristoro" ||
               (tab === "servizi" && (p.categoria === "wc" || p.categoria === "asciugatura"))) &&
             hasCoda &&
             coda >= 0 &&
-            parcoClosed !== true;
+            !(isService && freezeServiceQueues);
 
           return (
             <li
