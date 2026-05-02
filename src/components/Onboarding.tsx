@@ -338,8 +338,21 @@ export function Onboarding({ onComplete }: Props) {
   const StepIcon = STEP_ICONS[step];
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center px-4">
-      <div className="pointer-events-auto flex h-[42dvh] max-h-[42dvh] w-full max-w-lg flex-col bg-transparent">
+    <div className="pointer-events-none fixed inset-0 z-20">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden bg-black" aria-hidden>
+        <video
+          className="h-full w-full object-cover opacity-90"
+          src="/videos/onboarding-vegetation.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+        />
+        <div className="absolute inset-0 bg-black/35" />
+      </div>
+      <div className="relative flex h-full min-h-0 w-full items-center justify-center px-4">
+        <div className="pointer-events-auto flex h-[42dvh] max-h-[42dvh] w-full max-w-lg flex-col bg-transparent">
         <main className="flex min-h-0 w-full flex-1 flex-col px-4">
           <div className="shrink-0 pb-3 pt-2">
             <div className="mt-2 grid grid-cols-4 gap-2">
@@ -537,6 +550,7 @@ export function Onboarding({ onComplete }: Props) {
             </div>
           )}
         </footer>
+        </div>
       </div>
     </div>
   );
