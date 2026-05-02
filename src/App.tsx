@@ -795,30 +795,35 @@ function App() {
         }}
       />
 
-      <div className="fixed bottom-3 left-3 z-[88] max-w-[min(92vw,320px)] pb-[env(safe-area-inset-bottom,0px)]">
-        <footer className="pointer-events-auto text-[10px] leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-          Based on Europa Park attractions. Real-time attraction queue data powered by{" "}
-          <a
-            href="https://queue-times.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline decoration-white/50 underline-offset-2 hover:text-white"
-          >
-            Queue-Times.com
-          </a>
-          . Food and services queue data are simulated.{" "}
-          <button
-            type="button"
-            className="inline p-0 text-left underline decoration-white/50 underline-offset-2 hover:text-white"
-            onClick={() => {
-              setLauncherKind("badge");
-              setPoiPanelOpen(false);
-              setBadgeScreenOpen(true);
-            }}
-          >
-            Click here
-          </button>{" "}
-          to open the badge gallery and save an attraction badge image to scan.
+      <div className="fixed bottom-3 right-3 z-[88] max-w-[min(92vw,360px)] pb-[env(safe-area-inset-bottom,0px)]">
+        <footer className="pointer-events-auto flex flex-col gap-1 text-right text-[12px] leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+          <p>
+            Based on Europa-Park attractions.{" "}
+            <button
+              type="button"
+              className="inline p-0 underline decoration-white/50 underline-offset-2 hover:text-white"
+              onClick={() => {
+                setLauncherKind("badge");
+                setPoiPanelOpen(false);
+                setBadgeScreenOpen(true);
+              }}
+            >
+              Click here
+            </button>{" "}
+            to open the badge gallery and save an attraction badge image to scan.
+          </p>
+          <p>
+            Real-time attraction queue data powered by{" "}
+            <a
+              href="https://queue-times.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline decoration-white/50 underline-offset-2 hover:text-white"
+            >
+              Queue-Times.com
+            </a>
+            . Food and services queue data are simulated.
+          </p>
         </footer>
       </div>
 
