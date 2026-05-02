@@ -26,9 +26,9 @@ type Props = {
 const ALL_INTENSITA: Intensita[] = ["bassa", "media", "alta"];
 const ALL_DIETE: Dieta[] = ["normale", "vegano", "celiaco"];
 const INTENSITA_LABEL_EN: Record<Intensita, string> = {
-  bassa: "Low",
-  media: "Medium",
-  alta: "High",
+  bassa: "Chill",
+  media: "Adventurous",
+  alta: "Extreme",
 };
 const DIETA_LABEL_EN: Record<Dieta, string> = {
   normale: "I eat everything",
@@ -452,8 +452,10 @@ export function Onboarding({ onComplete }: Props) {
 
                     {step === 3 ? (
                       <div>
-                        <div className="text-sm font-semibold text-zinc-100">Thrill level</div>
-                        <p className="mt-0.5 text-xs text-zinc-400">We’ll filter rides by intensity.</p>
+                        <div className="text-sm font-semibold text-zinc-100">
+                          How much adrenaline can you handle?
+                        </div>
+                        <p className="mt-0.5 text-xs text-zinc-400">Pick as many as you like</p>
 
                         <div className="mt-4 space-y-3">
                           {ALL_INTENSITA.map((a) => {
