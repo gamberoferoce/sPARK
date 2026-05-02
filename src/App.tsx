@@ -829,9 +829,9 @@ function App() {
       </div>
 
       {!xrOpen ? (
-        <div className="fixed bottom-3 right-3 z-[95] max-w-[min(92vw,360px)] pb-[env(safe-area-inset-bottom,0px)]">
-          <footer className="pointer-events-auto flex flex-col gap-1 text-right text-[12px] leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-            <p>
+        <div className="fixed bottom-3 right-3 z-[95] max-w-[min(96vw,520px)] pb-[env(safe-area-inset-bottom,0px)]">
+          <footer className="pointer-events-auto text-right text-[12px] leading-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+            <p className="m-0">
               Based on Europa-Park attractions.{" "}
               <button
                 type="button"
@@ -845,8 +845,7 @@ function App() {
                 Click here
               </button>{" "}
               to open the badge gallery and save an attraction badge image to scan.
-            </p>
-            <p>
+              <br />
               Real-time attraction queue data powered by{" "}
               <a
                 href="https://queue-times.com"
