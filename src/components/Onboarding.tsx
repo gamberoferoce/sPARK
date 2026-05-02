@@ -432,7 +432,7 @@ export function Onboarding({ onComplete }: Props) {
                         </p>
                       </div>
                     </div>
-                    <div className="mt-4 grid w-full grid-cols-3 gap-2">
+                    <div className="mx-auto mt-4 w-full max-w-sm space-y-3">
                       {ALL_DIETE.map((d) => {
                         const on = diete[d];
                         return (
@@ -442,7 +442,7 @@ export function Onboarding({ onComplete }: Props) {
                             aria-pressed={on}
                             onClick={() => setDiete((prev) => ({ ...prev, [d]: !prev[d] }))}
                             className={[
-                              "flex min-h-[44px] w-full items-center justify-center rounded-[3rem] px-1.5 py-2 text-center text-[11px] font-semibold capitalize leading-tight ring-1 transition-colors sm:px-2 sm:text-xs sm:leading-snug",
+                              "w-full rounded-[3rem] px-3 py-3 text-left text-sm font-semibold capitalize ring-1 transition-colors",
                               on
                                 ? "bg-white/10 text-zinc-100 ring-white/20"
                                 : "bg-zinc-900/40 text-zinc-400 ring-white/10 hover:bg-white/5 hover:text-zinc-200",
@@ -469,7 +469,7 @@ export function Onboarding({ onComplete }: Props) {
                         <p className="mt-0.5 text-xs text-zinc-400">Pick as many as you like</p>
                       </div>
                     </div>
-                    <div className="mt-4 grid w-full grid-cols-3 gap-2">
+                    <div className="mx-auto mt-4 w-full max-w-sm space-y-3">
                       {ALL_INTENSITA.map((a) => {
                         const on = intensita[a];
                         return (
@@ -479,7 +479,7 @@ export function Onboarding({ onComplete }: Props) {
                             aria-pressed={on}
                             onClick={() => setIntensita((prev) => ({ ...prev, [a]: !prev[a] }))}
                             className={[
-                              "flex min-h-[44px] w-full items-center justify-center rounded-[3rem] px-1.5 py-2 text-center text-[11px] font-semibold capitalize leading-tight ring-1 transition-colors sm:px-2 sm:text-xs sm:leading-snug",
+                              "w-full rounded-[3rem] px-3 py-3 text-left text-sm font-semibold capitalize ring-1 transition-colors",
                               on
                                 ? "bg-white/10 text-zinc-100 ring-white/20"
                                 : "bg-zinc-900/40 text-zinc-400 ring-white/10 hover:bg-white/5 hover:text-zinc-200",
