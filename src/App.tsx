@@ -799,17 +799,14 @@ function App() {
         <footer className="pointer-events-auto text-right text-[12px] leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
           <p className="m-0">
             Based on Europa-Park attractions.{" "}
-            <button
-              type="button"
-              className="inline p-0 underline decoration-white/50 underline-offset-2 hover:text-white"
-              onClick={() => {
-                setLauncherKind("badge");
-                setPoiPanelOpen(false);
-                setBadgeScreenOpen(true);
-              }}
+            <a
+              href="https://drive.google.com/drive/folders/18X0vvuc129E1qeFKHkeSa9ABXGdDzTaV?usp=drive_link"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline decoration-white/50 underline-offset-2 hover:text-white"
             >
               Click here
-            </button>{" "}
+            </a>{" "}
             to open the badge gallery and save an attraction badge image to scan.
           </p>
           <p className="m-0 mt-1">
