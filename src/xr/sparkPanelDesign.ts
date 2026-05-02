@@ -2,8 +2,15 @@
  * sPARK XR — Spark panel design tokens (UIKit layout px).
  *
  * The panel is a fixed “artboard”: no percentages against the WebGL canvas.
- * Only uniform `scale` on the root Container maps this design into world space.
+ * Uniform `scale` on the root Container maps this design into world space.
+ *
+ * **Qualità / nitidezza (pmndrs/uikit):** `pixelSize` è il metro-per-pixel-logico (default libreria = 0.01).
+ * Valori più bassi = più pixel effettivi per la stessa dimensione fisica → testo MSDF e pannelli meno “sgranati”.
+ * Si compensa aumentando `XR_UI_SCALE_DEFAULT` così `pixelSize × scale` (ingombro nel mondo) resta coerente.
+ *
+ * `XR_PIXEL_SIZE`: metà del default libreria (~2× risoluzione effettiva vs 0.01).
  */
+export const XR_PIXEL_SIZE = 0.005 as const;
 export const XR_PANEL = {
   w: 920,
   /** Total stack height: launcher + gap + sheet + exit row (world-space artboard). */
@@ -39,5 +46,8 @@ export const XR_CONTENT_H = 880;
 /** POI pill width — mirrors desktop ~360px card at max-w. */
 export const XR_ROW_W = Math.min(380, XR_INNER_W - 8);
 
-/** Uniform scale fallback (debug override `?xrUiScale=`). */
-export const XR_UI_SCALE_DEFAULT = 0.064;
+/**
+ * Scala mondo sul root UI (override `?xrUiScale=`).
+ * Accoppiata a `XR_PIXEL_SIZE`: 0.005 × 0.128 ≈ 0.01 × 0.064 (stessa dimensione fisica, più nitido).
+ */
+export const XR_UI_SCALE_DEFAULT = 0.128;

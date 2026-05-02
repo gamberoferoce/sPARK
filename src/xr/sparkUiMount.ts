@@ -8,7 +8,14 @@ import { PARCO } from "@/core/config.js";
 import { filterPoisByProfile } from "@/lib/poiFilter";
 import type { Poi } from "@/types/poi";
 
-import { XR_CONTENT_H, XR_INNER_W, XR_PANEL, XR_ROW_W, XR_UI_SCALE_DEFAULT } from "./sparkPanelDesign";
+import {
+  XR_CONTENT_H,
+  XR_INNER_W,
+  XR_PANEL,
+  XR_PIXEL_SIZE,
+  XR_ROW_W,
+  XR_UI_SCALE_DEFAULT,
+} from "./sparkPanelDesign";
 
 /** Mirrors desktop POIList.tsx */
 const CARD_BG = "rgba(0,0,0,0.45)";
@@ -212,6 +219,13 @@ export type MountSparkUiOpts = {
 };
 
 export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): () => void {
+  try {
+    const pr = Math.min(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1, 2);
+    world.renderer.setPixelRatio(pr);
+  } catch {
+    // ignore
+  }
+
   const debug = flagParam("xrDbg");
   const dbgUiScale = parseFloatParam("xrUiScale", NaN);
   const dbgUiY = parseFloatParam("xrUiY", NaN);
@@ -264,6 +278,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   const uiRoot = new Container({
     width: XR_PANEL.w,
     height: stackH,
+    pixelSize: XR_PIXEL_SIZE,
     padding: 0,
     gap: XR_PANEL.gapLauncherSheet,
     backgroundColor: "rgba(0,0,0,0)",
