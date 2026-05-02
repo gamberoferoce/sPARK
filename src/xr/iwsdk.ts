@@ -8,6 +8,7 @@ import {
 } from "@iwsdk/core";
 
 import { mountDesktopLikeSparkUi } from "./sparkUiMount";
+import { applyXrUiRenderingBoost } from "./xrRendererQuality";
 
 let worldPromise: Promise<World> | null = null;
 let stopWorldUi: (() => void) | null = null;
@@ -187,6 +188,7 @@ export async function enterAR() {
   }
 
   const w = await getWorld();
+  applyXrUiRenderingBoost(w);
 
   if (w.session) {
     console.warn("[XR] Session already active");

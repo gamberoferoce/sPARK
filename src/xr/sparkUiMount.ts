@@ -16,14 +16,15 @@ import {
   XR_ROW_W,
   XR_UI_SCALE_DEFAULT,
 } from "./sparkPanelDesign";
+import { applyXrUiRenderingBoost } from "./xrRendererQuality";
 
-/** Mirrors desktop POIList.tsx */
-const CARD_BG = "rgba(0,0,0,0.45)";
-const LINE = "#27272a";
-const CIRCLE_BG = "rgba(0,0,0,0.55)";
-const LAUNCHER_BG = "rgba(24,24,27,0.82)";
-const TAB_ACTIVE_BG = "rgba(82,82,91,0.5)";
-const TAB_ACTIVE_RING = "rgba(255,255,255,0.1)";
+/** Più contrasto / opacità del desktop su passthrough (sfondo reale “schiarisce” UI trasparenti). */
+const CARD_BG = "rgba(8,8,10,0.78)";
+const LINE = "rgba(255,255,255,0.28)";
+const CIRCLE_BG = "rgba(12,12,14,0.88)";
+const LAUNCHER_BG = "rgba(18,18,22,0.92)";
+const TAB_ACTIVE_BG = "rgba(100,100,110,0.65)";
+const TAB_ACTIVE_RING = "rgba(255,255,255,0.22)";
 
 const STICKERS = [
   "/stickers/sticker-1.png",
@@ -219,12 +220,8 @@ export type MountSparkUiOpts = {
 };
 
 export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): () => void {
-  try {
-    const pr = Math.min(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1, 2);
-    world.renderer.setPixelRatio(pr);
-  } catch {
-    // ignore
-  }
+  /* DPR dopo session start (framebuffer già fissato in enterAR). */
+  applyXrUiRenderingBoost(world);
 
   const debug = flagParam("xrDbg");
   const dbgUiScale = parseFloatParam("xrUiScale", NaN);
@@ -296,7 +293,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
 
   uiRoot.scale.setScalar(Number.isFinite(dbgUiScale) ? dbgUiScale : XR_UI_SCALE_DEFAULT);
   /* Camera locale: Y negativo = più in basso nel campo visivo (override ?xrUiY=). Z ~75 cm davanti (?xrUiZ=). */
-  const uiYDefault = -0.1;
+  const uiYDefault = -0.32;
   uiRoot.position.set(0, Number.isFinite(dbgUiY) ? dbgUiY : uiYDefault, Number.isFinite(dbgUiZ) ? dbgUiZ : -0.75);
   uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
   uiRoot.visible = true;

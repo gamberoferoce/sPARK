@@ -10,7 +10,8 @@
  *
  * `XR_PIXEL_SIZE`: più basso = più dettaglio (meno sgranato). Accoppiato a `XR_UI_SCALE_DEFAULT`.
  */
-export const XR_PIXEL_SIZE = 0.0025 as const;
+/** Più basso = più texel per metro (meno “mosaico”). ×scale mantiene lo stesso ingombro (~0.00128 m/px layout). */
+export const XR_PIXEL_SIZE = 0.0016 as const;
 export const XR_PANEL = {
   w: 920,
   /** Total stack height: launcher + gap + sheet + exit row (world-space artboard). */
@@ -48,7 +49,6 @@ export const XR_ROW_W = Math.min(380, XR_INNER_W - 8);
 
 /**
  * Scala mondo sul root UI (override `?xrUiScale=`).
- * Rispetto a 0.005×0.128: prodotto pixelSize×scale raddoppiato → **UI ~2× più grande in stanza**, con pixelSize più fine per leggibilità.
- * (0.0025 × 0.512 = 0.00128 = 2 × 0.005 × 0.128)
+ * Prodotto pixelSize×scale ≈ 0.00128 m per px layout (stesso footprint di 0.0025×0.512).
  */
-export const XR_UI_SCALE_DEFAULT = 0.512;
+export const XR_UI_SCALE_DEFAULT = 0.8;
