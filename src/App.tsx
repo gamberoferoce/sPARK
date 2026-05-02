@@ -10,6 +10,7 @@ import { PARCO } from "@/core/config.js";
 import type { Poi } from "@/types/poi";
 import { enterAR, exitAR } from "@/xr/iwsdk";
 import { filterPoisByProfile } from "@/lib/poiFilter";
+import { FixedArtboard } from "@/components/FixedArtboard";
 
 function LauncherButton({
   kind,
@@ -801,8 +802,8 @@ function App() {
           className="fixed left-1/2 top-14 z-40 overflow-visible transition-transform duration-300 ease-out"
           style={{ transform: "translateX(calc(-50% - 3px))" }}
         >
-          <div className="relative" style={{ width: "50vw", maxWidth: "32rem" }}>
-            <div className="pointer-events-auto">
+          <FixedArtboard>
+            <div className="pointer-events-auto w-full max-w-lg">
               <POIList
                 fullBleed={false}
                 pois={poisFiltrati}
@@ -823,7 +824,7 @@ function App() {
                 calcolaDistanzaM={(poiPos) => calcolaDistanza(posUtente ?? posFallback, poiPos)}
               />
             </div>
-          </div>
+          </FixedArtboard>
         </div>
       ) : null}
 

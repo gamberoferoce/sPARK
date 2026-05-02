@@ -216,7 +216,7 @@ export function POIList({
               <div
                 className={cn(
                   "group relative overflow-visible",
-                  fullBleed ? "w-full" : "ml-auto -mr-10 w-[360px] max-w-full",
+                  fullBleed ? "w-full" : "ml-auto -mr-10 w-[360px] shrink-0",
                 )}
               >
                 <div
