@@ -338,7 +338,7 @@ export function Onboarding({ onComplete }: Props) {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center px-4">
-      <div className="pointer-events-auto flex h-[42dvh] max-h-[42dvh] w-full max-w-lg flex-col bg-black/45 ring-1 ring-white/10 backdrop-blur">
+      <div className="pointer-events-auto flex h-[42dvh] max-h-[42dvh] w-full max-w-lg flex-col bg-transparent">
         <main className="flex min-h-0 w-full flex-1 flex-col px-4">
           <div className="shrink-0 pb-3 pt-2">
             <div className="mt-2 grid grid-cols-4 gap-2">
@@ -368,12 +368,7 @@ export function Onboarding({ onComplete }: Props) {
 
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
             <div className="mx-auto flex min-h-full w-full max-w-full flex-col justify-center py-2">
-              <div
-                className={[
-                  "relative p-3",
-                  step === 0 ? "rounded-[3rem] bg-zinc-950/50 ring-1 ring-white/10" : "",
-                ].join(" ")}
-              >
+              <div className="relative p-3">
                 <div className="flex items-start gap-3">
                   <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-transparent ring-1 ring-white">
                     <StepIcon className="h-4 w-4 text-zinc-200" />
