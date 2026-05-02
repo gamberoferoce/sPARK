@@ -256,6 +256,8 @@ function App() {
   const lastQueueTimesOkRef = useRef<number>(0);
   const parcoClosedRef = useRef(parcoClosed);
   const prevParcoClosedForServicesRef = useRef(parcoClosed);
+  /** Impostato dall’effect Queue-Times: dopo il load di poi.json si rifà il fetch così non si perdono wait reali né parcoClosed. */
+  const queueTimesRefreshRef = useRef<(() => void) | null>(null);
 
   function parseYmd(ymd: string) {
     const m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -328,7 +330,9 @@ function App() {
     const tick = () => {
       // If Queue-Times is updating, treat it as source of truth for open/closed.
       if (Date.now() - lastQueueTimesOkRef.current < 10 * 60 * 1000) return;
-      setParcoClosed(isParcoOpenNow(new Date()) === false);
+      const closed = isParcoOpenNow(new Date()) === false;
+      parcoClosedRef.current = closed;
+      setParcoClosed(closed);
     };
     tick();
     const id = window.setInterval(tick, 60 * 1000);
@@ -396,7 +400,10 @@ function App() {
       .then((data) => {
         if (cancelled) return;
         const loaded = Array.isArray(data) ? (data as Poi[]) : [];
-        setPois(loaded);
+        const merged = applySimulatedServiceQueues(loaded, parcoClosedRef.current);
+        poisRef.current = merged;
+        setPois(merged);
+        queueTimesRefreshRef.current?.();
         const initial: Record<string, boolean> = {};
         try {
           const raw = localStorage.getItem("sparkBellById");
@@ -457,6 +464,7 @@ function App() {
         // Queue-Times open/closed truth: if all rides are closed, treat park as closed.
         lastQueueTimesOkRef.current = Date.now();
         const allClosed = rides.every((r) => r && r.is_open === false);
+        parcoClosedRef.current = allClosed;
         setParcoClosed(allClosed);
 
         const currentPois = poisRef.current;
@@ -500,9 +508,15 @@ function App() {
       }
     };
 
+    queueTimesRefreshRef.current = () => {
+      void tick();
+    };
     tick();
     const id = window.setInterval(tick, 5 * 60 * 1000);
-    return () => window.clearInterval(id);
+    return () => {
+      queueTimesRefreshRef.current = null;
+      window.clearInterval(id);
+    };
   }, []);
 
   // Ottiene e aggiorna posUtente via geolocalizzazione
