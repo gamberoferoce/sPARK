@@ -8,9 +8,9 @@
  * Valori più bassi = più pixel effettivi per la stessa dimensione fisica → testo MSDF e pannelli meno “sgranati”.
  * Si compensa aumentando `XR_UI_SCALE_DEFAULT` così `pixelSize × scale` (ingombro nel mondo) resta coerente.
  *
- * `XR_PIXEL_SIZE`: metà del default libreria (~2× risoluzione effettiva vs 0.01).
+ * `XR_PIXEL_SIZE`: più basso = più dettaglio (meno sgranato). Accoppiato a `XR_UI_SCALE_DEFAULT`.
  */
-export const XR_PIXEL_SIZE = 0.005 as const;
+export const XR_PIXEL_SIZE = 0.0025 as const;
 export const XR_PANEL = {
   w: 920,
   /** Total stack height: launcher + gap + sheet + exit row (world-space artboard). */
@@ -48,6 +48,7 @@ export const XR_ROW_W = Math.min(380, XR_INNER_W - 8);
 
 /**
  * Scala mondo sul root UI (override `?xrUiScale=`).
- * Accoppiata a `XR_PIXEL_SIZE`: 0.005 × 0.128 ≈ 0.01 × 0.064 (stessa dimensione fisica, più nitido).
+ * Rispetto a 0.005×0.128: prodotto pixelSize×scale raddoppiato → **UI ~2× più grande in stanza**, con pixelSize più fine per leggibilità.
+ * (0.0025 × 0.512 = 0.00128 = 2 × 0.005 × 0.128)
  */
-export const XR_UI_SCALE_DEFAULT = 0.128;
+export const XR_UI_SCALE_DEFAULT = 0.512;
