@@ -5,13 +5,17 @@
  * Only uniform `scale` on the root Container maps this design into world space.
  */
 export const XR_PANEL = {
-  w: 900,
-  h: 1060,
+  w: 920,
+  /** Total stack height: launcher + gap + sheet + exit row (world-space artboard). */
+  h: 1120,
+  /** Launcher icon row (matches desktop h-10 + breathing room). */
+  launcherSlot: 48,
+  gapLauncherSheet: 16,
   header: 56,
-  rowCardMinH: 72,
-  rowBadgeMinH: 100,
-  padOuter: 18,
-  padInner: 12,
+  rowCardMinH: 76,
+  rowBadgeMinH: 104,
+  padOuter: 0,
+  padInner: 14,
   gapSection: 12,
   gapRow: 12,
   iconTab: 26,
@@ -20,16 +24,21 @@ export const XR_PANEL = {
   tabMinW: 128,
   fsBrand: 26,
   fsTag: 13,
-  fsTab: 15,
-  fsBody: 16,
-  fsSmall: 13,
+  fsTab: 14,
+  fsBody: 15,
+  fsSmall: 12,
+  fsDistance: 12,
+  exitRowH: 40,
 } as const;
 
-/** Inner column width inside padded `uiRoot`. */
-export const XR_INNER_W = XR_PANEL.w - 2 * XR_PANEL.padOuter;
+/** Inner column width (horizontal padding like desktop px-4). */
+export const XR_INNER_W = XR_PANEL.w - 32;
 
-/** Scroll viewport height below header + section gap. */
-export const XR_CONTENT_H = XR_PANEL.h - 2 * XR_PANEL.padOuter - XR_PANEL.header - XR_PANEL.gapSection;
+/** Scroll viewport: floating sheet body (no outer panel fill — transparent). */
+export const XR_CONTENT_H = 880;
 
-/** List row width inside the padded content region. */
-export const XR_ROW_W = XR_INNER_W - 2 * XR_PANEL.padInner;
+/** POI pill width — mirrors desktop ~360px card at max-w. */
+export const XR_ROW_W = Math.min(380, XR_INNER_W - 8);
+
+/** Uniform scale fallback (debug override `?xrUiScale=`). */
+export const XR_UI_SCALE_DEFAULT = 0.032;

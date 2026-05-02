@@ -1,0 +1,1197 @@
+import { Container, Image as UiImage, Text } from "@pmndrs/uikit";
+import type { World } from "@iwsdk/core";
+import { DoubleSide, Euler, Mesh, MeshBasicMaterial, Object3D, Quaternion, Raycaster, SphereGeometry, Vector3 } from "three";
+
+import type { ProfiloUtente } from "@/components/Onboarding";
+import { calcolaDistanza } from "@/core/algorithm.js";
+import { PARCO } from "@/core/config.js";
+import { filterPoisByProfile } from "@/lib/poiFilter";
+import type { Poi } from "@/types/poi";
+
+import { XR_CONTENT_H, XR_INNER_W, XR_PANEL, XR_ROW_W, XR_UI_SCALE_DEFAULT } from "./sparkPanelDesign";
+
+/** Mirrors desktop POIList.tsx */
+const CARD_BG = "rgba(0,0,0,0.45)";
+const LINE = "#27272a";
+const CIRCLE_BG = "rgba(0,0,0,0.55)";
+const LAUNCHER_BG = "rgba(24,24,27,0.82)";
+const TAB_ACTIVE_BG = "rgba(82,82,91,0.5)";
+const TAB_ACTIVE_RING = "rgba(255,255,255,0.1)";
+
+const STICKERS = [
+  "/stickers/sticker-1.png",
+  "/stickers/sticker-2.png",
+  "/stickers/sticker-3.png",
+  "/stickers/sticker-4.png",
+  "/stickers/sticker-5.png",
+] as const;
+
+function hashString(s: string) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function stickerForRideId(id: string) {
+  return STICKERS[hashString(id) % STICKERS.length]!;
+}
+
+function formatDistanza(metri: number) {
+  if (!Number.isFinite(metri)) return "—";
+  if (metri < 1000) return `${Math.round(metri)} m`;
+  return `${(metri / 1000).toFixed(1)} km`;
+}
+
+function parseYmd(ymd: string) {
+  const m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return null;
+  return new Date(y, mo - 1, d);
+}
+
+function parseHm(hm: string) {
+  const m = String(hm).match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+  return hh * 60 + mm;
+}
+
+function isParcoOpenNow(now = new Date()) {
+  const start = parseYmd(PARCO.stagione.inizio);
+  const end = parseYmd(PARCO.stagione.fine);
+  if (!start || !end) return true;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (today < start || today > end) return false;
+  const openMin = parseHm(PARCO.orario_apertura) ?? 0;
+  const closeMin = parseHm(PARCO.orario_chiusura_default) ?? 24 * 60;
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  return nowMin >= openMin && nowMin < closeMin;
+}
+
+function waitBadgeColors(minuti: number) {
+  if (minuti < 15) {
+    return {
+      bg: "rgba(6,78,59,0.72)",
+      fg: "rgba(167,243,208,1)",
+      ring: "rgba(16,185,129,0.28)",
+    };
+  }
+  if (minuti <= 45) {
+    return {
+      bg: "rgba(69,26,3,0.55)",
+      fg: "rgba(253,230,138,1)",
+      ring: "rgba(245,158,11,0.28)",
+    };
+  }
+  return {
+    bg: "rgba(69,10,10,0.85)",
+    fg: "rgba(254,205,211,1)",
+    ring: "rgba(190,18,60,0.38)",
+  };
+}
+
+function loadProfilo(): ProfiloUtente | null {
+  try {
+    const raw = localStorage.getItem("profiloUtente");
+    if (!raw) return null;
+    const p = JSON.parse(raw) as unknown;
+    if (!p || typeof p !== "object") return null;
+    const o = p as Record<string, unknown>;
+    if (typeof o.altezza_cm !== "number" || !Array.isArray(o.intensita) || !Array.isArray(o.diete)) return null;
+    return p as ProfiloUtente;
+  } catch {
+    return null;
+  }
+}
+
+function loadBellMap(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem("sparkBellById");
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, boolean>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistBellMap(b: Record<string, boolean>) {
+  try {
+    localStorage.setItem("sparkBellById", JSON.stringify(b));
+  } catch {
+    // ignore
+  }
+}
+
+function loadLastPos(): Poi["posizione"] {
+  try {
+    const raw = localStorage.getItem("lastUserPos");
+    if (!raw) return { lat: 45.4631, lng: 9.1894 };
+    const p = JSON.parse(raw) as unknown;
+    if (!p || typeof p !== "object") return { lat: 45.4631, lng: 9.1894 };
+    const o = p as Record<string, unknown>;
+    if (typeof o.lat === "number" && typeof o.lng === "number") return { lat: o.lat, lng: o.lng };
+  } catch {
+    // ignore
+  }
+  return { lat: 45.4631, lng: 9.1894 };
+}
+
+type XRKind = "cards" | "badge";
+type PoiCat = "attrazione" | "ristoro" | "servizi";
+type BadgeSub = "galleria" | "scansiona";
+
+type XrUi =
+  | { k: "launcher" }
+  | { k: "exit" }
+  | { k: "poiCat"; cat: PoiCat }
+  | { k: "badgeSub"; sub: BadgeSub }
+  | { k: "bell"; id: string }
+  | { k: "nav"; id: string }
+  | { k: "scanStart" };
+
+function readXrUi(o: Object3D | null): XrUi | null {
+  let cur: Object3D | null = o;
+  while (cur) {
+    const u = (cur as unknown as { userData?: { xrUi?: XrUi } }).userData?.xrUi;
+    if (u) return u;
+    cur = cur.parent;
+  }
+  return null;
+}
+
+function flagParam(name: string) {
+  try {
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.has(name)) return true;
+    const raw = sessionStorage.getItem("xrFlags");
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || parsed === null) return false;
+    return name in (parsed as object);
+  } catch {
+    return false;
+  }
+}
+
+function parseFloatParam(name: string, fallback: number) {
+  try {
+    const qs = new URLSearchParams(window.location.search);
+    let v = qs.get(name);
+    if (!v) {
+      const raw = sessionStorage.getItem("xrFlags");
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        if (parsed && typeof parsed === "object" && name in parsed) v = String(parsed[name]);
+      }
+    }
+    if (!v) return fallback;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export type MountSparkUiOpts = {
+  onExit: () => void | Promise<void>;
+  xrDomOverlayFallbackHint?: string | null;
+};
+
+export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): () => void {
+  const debug = flagParam("xrDbg");
+  const dbgUiScale = parseFloatParam("xrUiScale", NaN);
+  const dbgUiZ = parseFloatParam("xrUiZ", NaN);
+  const uiProbe = flagParam("xrUiProbe");
+  const followCam = !flagParam("xrWorldUi");
+
+  const rootEl = document.getElementById("root");
+  const hideDom = () => {
+    if (rootEl) rootEl.style.display = "none";
+  };
+  const showDom = () => {
+    if (rootEl) rootEl.style.display = "";
+  };
+
+  let launcherKind: XRKind = (() => {
+    try {
+      const v = localStorage.getItem("launcherKind");
+      return v === "badge" ? "badge" : "cards";
+    } catch {
+      return "cards";
+    }
+  })();
+  let sheetOpen = false;
+  let poiCat: PoiCat = "attrazione";
+  let badgeSub: BadgeSub = "galleria";
+  let scanNotice = false;
+
+  let profilo = loadProfilo();
+  let bellById = loadBellMap();
+  let userPos = loadLastPos();
+  let parcoClosed = !isParcoOpenNow();
+  /** Last successful Queue-Times fetch — mirrors App `lastQueueTimesOkRef` for season fallback window. */
+  let lastQueueTimesOk = 0;
+  let rawPois: Poi[] = [];
+
+  const hudEl = document.getElementById("xr-html-debug") ?? createHudEl();
+
+  function createHudEl() {
+    const el = document.createElement("div");
+    el.id = "xr-html-debug";
+    el.style.cssText =
+      "position:fixed;left:12px;top:12px;z-index:999999;max-width:min(92vw,520px);padding:10px 12px;border-radius:14px;background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.92);font:12px/1.35 system-ui;pointer-events:none";
+    document.body.appendChild(el);
+    return el;
+  }
+
+  const stackH = XR_PANEL.launcherSlot + XR_PANEL.gapLauncherSheet + XR_CONTENT_H + XR_PANEL.gapSection + XR_PANEL.exitRowH;
+
+  const uiRoot = new Container({
+    width: XR_PANEL.w,
+    height: stackH,
+    padding: 0,
+    gap: XR_PANEL.gapLauncherSheet,
+    backgroundColor: "rgba(0,0,0,0)",
+    borderWidth: uiProbe ? 2 : 0,
+    borderColor: uiProbe ? "rgba(255,60,60,0.6)" : "rgba(0,0,0,0)",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    depthTest: false,
+    depthWrite: false,
+    renderOrder: 1000,
+    fontFamily: "inter",
+    fontWeight: "medium",
+  });
+
+  uiRoot.scale.setScalar(Number.isFinite(dbgUiScale) ? dbgUiScale : XR_UI_SCALE_DEFAULT);
+  uiRoot.position.set(0, 0, Number.isFinite(dbgUiZ) ? dbgUiZ : -1.12);
+  uiRoot.quaternion.setFromEuler(new Euler(0, 0, 0));
+  uiRoot.visible = true;
+
+  const launcherSlot = new Container({
+    width: XR_PANEL.w,
+    height: XR_PANEL.launcherSlot,
+    flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  });
+
+  const sheetSlot = new Container({
+    width: XR_INNER_W,
+    height: XR_CONTENT_H,
+    flexShrink: 0,
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    overflow: "scroll",
+    backgroundColor: "rgba(0,0,0,0)",
+    gap: 10,
+  });
+
+  const exitSlot = new Container({
+    width: XR_INNER_W,
+    height: XR_PANEL.exitRowH,
+    flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  });
+
+  uiRoot.add(launcherSlot);
+  uiRoot.add(sheetSlot);
+  uiRoot.add(exitSlot);
+
+  const exitBtn = new Container({
+    paddingLeft: 18,
+    paddingRight: 18,
+    paddingTop: 10,
+    paddingBottom: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(0,0,0,0.42)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  });
+  (exitBtn as unknown as Object3D).userData = { xrUi: { k: "exit" } satisfies XrUi };
+  exitBtn.add(
+    new Text({
+      text: "Exit AR",
+      fontSize: XR_PANEL.fsSmall + 1,
+      color: "rgba(244,244,245,0.95)",
+    }),
+  );
+  exitSlot.add(exitBtn);
+
+  function poiFiltered(): Poi[] {
+    if (!profilo) return [];
+    return filterPoisByProfile(rawPois, profilo);
+  }
+
+  function poiSortedForTab(): Array<{ p: Poi; m: number; bell: boolean; coda: number }> {
+    const list = poiFiltered().filter((p) => {
+      if (poiCat === "servizi") {
+        return p.categoria === "servizi" || p.categoria === "wc" || p.categoria === "asciugatura";
+      }
+      return p.categoria === poiCat;
+    });
+    const rows = list.map((p) => ({
+      p,
+      m: calcolaDistanza(userPos, p.posizione),
+      bell: bellById[p.id] === true,
+      coda: Number(p.coda_minuti),
+    }));
+    rows.sort((a, b) => {
+      if (a.bell !== b.bell) return a.bell ? -1 : 1;
+      const ac = Number.isFinite(a.coda) ? a.coda : 9999;
+      const bc = Number.isFinite(b.coda) ? b.coda : 9999;
+      if (ac !== bc) return ac - bc;
+      if (a.m !== b.m) return a.m - b.m;
+      return a.p.nome.localeCompare(b.p.nome, "it");
+    });
+    return rows;
+  }
+
+  function mkLauncherButton() {
+    const btn = new Container({
+      width: 40,
+      height: 40,
+      flexShrink: 0,
+      borderRadius: 999,
+      backgroundColor: LAUNCHER_BG,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.95)",
+      alignItems: "center",
+      justifyContent: "center",
+    });
+    (btn as unknown as Object3D).userData = { xrUi: { k: "launcher" } satisfies XrUi };
+    const src = launcherKind === "badge" ? "/icons/tab-badges.png" : "/icons/tab-cards.svg";
+    btn.add(
+      new UiImage({
+        src,
+        width: launcherKind === "badge" ? 24 : 22,
+        height: launcherKind === "badge" ? 24 : 22,
+        opacity: 0.98,
+        color: "white",
+        depthTest: false,
+        depthWrite: false,
+      }),
+    );
+    return btn;
+  }
+
+  function mkPoiCategoryTabs() {
+    const row = new Container({
+      width: XR_INNER_W,
+      height: 44,
+      flexShrink: 0,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    });
+    const tabs: { cat: PoiCat; label: string }[] = [
+      { cat: "attrazione", label: "Rides" },
+      { cat: "ristoro", label: "Food" },
+      { cat: "servizi", label: "Services" },
+    ];
+    for (const t of tabs) {
+      const on = poiCat === t.cat;
+      const cell = new Container({
+        flexGrow: 1,
+        flexShrink: 1,
+        minWidth: 0,
+        height: 40,
+        borderRadius: 999,
+        paddingLeft: 12,
+        paddingRight: 12,
+        backgroundColor: on ? TAB_ACTIVE_BG : "rgba(0,0,0,0)",
+        borderWidth: on ? 1 : 0,
+        borderColor: on ? TAB_ACTIVE_RING : "rgba(0,0,0,0)",
+        alignItems: "center",
+        justifyContent: "center",
+      });
+      (cell as unknown as Object3D).userData = { xrUi: { k: "poiCat", cat: t.cat } satisfies XrUi };
+      cell.add(
+        new Text({
+          text: t.label,
+          fontSize: XR_PANEL.fsTab,
+          color: on ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.92)",
+          textAlign: "center",
+        }),
+      );
+      row.add(cell);
+    }
+    return row;
+  }
+
+  function mkBadgeSubTabs() {
+    const row = new Container({
+      width: XR_INNER_W,
+      height: 44,
+      flexShrink: 0,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+    });
+    const tabs: { sub: BadgeSub; label: string }[] = [
+      { sub: "galleria", label: "Gallery" },
+      { sub: "scansiona", label: "Scan" },
+    ];
+    for (const t of tabs) {
+      const on = badgeSub === t.sub;
+      const cell = new Container({
+        minWidth: 120,
+        height: 40,
+        borderRadius: 999,
+        paddingLeft: 16,
+        paddingRight: 16,
+        backgroundColor: on ? TAB_ACTIVE_BG : "rgba(0,0,0,0)",
+        borderWidth: on ? 1 : 0,
+        borderColor: on ? TAB_ACTIVE_RING : "rgba(0,0,0,0)",
+        alignItems: "center",
+        justifyContent: "center",
+      });
+      (cell as unknown as Object3D).userData = { xrUi: { k: "badgeSub", sub: t.sub } satisfies XrUi };
+      cell.add(
+        new Text({
+          text: t.label,
+          fontSize: XR_PANEL.fsTab,
+          color: "white",
+        }),
+      );
+      row.add(cell);
+    }
+    return row;
+  }
+
+  function mkPoiRow(p: Poi, m: number) {
+    const coda = Number(p.coda_minuti);
+    const hasCoda = Number.isFinite(coda);
+    const bellOn = bellById[p.id] === true;
+    const isClosed = parcoClosed || coda === -1;
+    const showWait =
+      (poiCat === "attrazione" || poiCat === "ristoro" || (poiCat === "servizi" && (p.categoria === "wc" || p.categoria === "asciugatura"))) &&
+      hasCoda &&
+      coda >= 0 &&
+      !parcoClosed;
+
+    const row = new Container({
+      width: XR_ROW_W,
+      minHeight: XR_PANEL.rowCardMinH,
+      flexShrink: 0,
+      borderRadius: 999,
+      backgroundColor: CARD_BG,
+      borderWidth: 1,
+      borderColor: LINE,
+      paddingLeft: 14,
+      paddingRight: 14,
+      paddingTop: 10,
+      paddingBottom: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: XR_PANEL.gapRow,
+    });
+
+    const left = new Container({
+      flexGrow: 1,
+      flexShrink: 1,
+      minWidth: 0,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    });
+
+    const iconWrap = new Container({
+      width: 44,
+      height: 44,
+      flexShrink: 0,
+      borderRadius: 999,
+      backgroundColor: CIRCLE_BG,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.7)",
+      alignItems: "center",
+      justifyContent: "center",
+    });
+    const iconSrc =
+      p.categoria === "attrazione"
+        ? "/icons/ride.svg"
+        : p.categoria === "ristoro"
+          ? "/icons/food.svg"
+          : p.categoria === "wc"
+            ? "/icons/wc.svg"
+            : p.categoria === "asciugatura"
+              ? "/icons/dryer.svg"
+              : "/icons/tab-cards.svg";
+    iconWrap.add(
+      new UiImage({
+        src: iconSrc,
+        width: p.categoria === "attrazione" ? 28 : 26,
+        height: p.categoria === "attrazione" ? 28 : 26,
+        opacity: 0.95,
+        color: "white",
+        depthTest: false,
+        depthWrite: false,
+      }),
+    );
+
+    const textCol = new Container({
+      flexGrow: 1,
+      flexShrink: 1,
+      minWidth: 0,
+      flexDirection: "column",
+      gap: 4,
+      alignItems: "flex-start",
+    });
+    textCol.add(
+      new Text({
+        text: p.nome,
+        fontSize: XR_PANEL.fsBody,
+        color: "white",
+        maxWidth: XR_ROW_W - 200,
+        wordBreak: "break-word",
+      }),
+    );
+    const distRow = new Container({
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    });
+    distRow.add(
+      new Text({
+        text: "📍",
+        fontSize: XR_PANEL.fsDistance,
+        color: "white",
+      }),
+    );
+    distRow.add(
+      new Text({
+        text: formatDistanza(m),
+        fontSize: XR_PANEL.fsDistance,
+        color: "rgba(161,161,170,1)",
+      }),
+    );
+    textCol.add(distRow);
+    left.add(iconWrap);
+    left.add(textCol);
+
+    const right = new Container({ flexShrink: 0, flexDirection: "column", alignItems: "flex-end", gap: 6 });
+
+    if (isClosed) {
+      const badge = new Container({
+        paddingLeft: 10,
+        paddingRight: 10,
+        paddingTop: 4,
+        paddingBottom: 4,
+        borderRadius: 999,
+        backgroundColor: "rgba(39,39,42,0.72)",
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.1)",
+      });
+      badge.add(new Text({ text: "Closed", fontSize: XR_PANEL.fsSmall, color: "rgba(228,228,231,0.95)" }));
+      right.add(badge);
+    } else if (showWait) {
+      const cols = waitBadgeColors(coda);
+      const badge = new Container({
+        paddingLeft: 10,
+        paddingRight: 10,
+        paddingTop: 4,
+        paddingBottom: 4,
+        borderRadius: 999,
+        backgroundColor: cols.bg,
+        borderWidth: 1,
+        borderColor: cols.ring,
+      });
+      badge.add(
+        new Text({
+          text: `${Math.round(coda)} min`,
+          fontSize: XR_PANEL.fsSmall,
+          color: cols.fg,
+        }),
+      );
+      right.add(badge);
+    } else {
+      right.add(new Text({ text: "—", fontSize: XR_PANEL.fsSmall, color: "rgba(82,82,91,1)" }));
+    }
+
+    const actions = new Container({
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      flexShrink: 0,
+    });
+
+    const bellBtn = new Container({
+      width: 36,
+      height: 36,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: "white",
+      backgroundColor: bellOn ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.25)",
+      alignItems: "center",
+      justifyContent: "center",
+    });
+    (bellBtn as unknown as Object3D).userData = { xrUi: { k: "bell", id: p.id } satisfies XrUi };
+    bellBtn.add(
+      new Text({
+        text: "🔔",
+        fontSize: 16,
+        color: "white",
+      }),
+    );
+
+    const navBtn = new Container({
+      width: 36,
+      height: 36,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: "white",
+      backgroundColor: "rgba(0,0,0,0.25)",
+      alignItems: "center",
+      justifyContent: "center",
+    });
+    (navBtn as unknown as Object3D).userData = { xrUi: { k: "nav", id: p.id } satisfies XrUi };
+    navBtn.add(
+      new Text({
+        text: "↗",
+        fontSize: 18,
+        color: "white",
+      }),
+    );
+
+    actions.add(bellBtn);
+    actions.add(navBtn);
+
+    row.add(left);
+    const rightStack = new Container({
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    });
+    rightStack.add(right);
+    rightStack.add(actions);
+    row.add(rightStack);
+
+    return row;
+  }
+
+  function build() {
+    profilo = loadProfilo();
+    bellById = loadBellMap();
+    userPos = loadLastPos();
+    try {
+      localStorage.setItem("launcherKind", launcherKind);
+    } catch {
+      // ignore
+    }
+
+    launcherSlot.clear();
+    launcherSlot.add(mkLauncherButton());
+
+    sheetSlot.clear();
+
+    if (!sheetOpen) {
+      sheetSlot.add(
+        new Text({
+          text: "Tap the icon to open Rides / Badges",
+          fontSize: XR_PANEL.fsSmall,
+          color: "rgba(161,161,170,0.95)",
+          textAlign: "center",
+        }),
+      );
+      return;
+    }
+
+    if (!profilo) {
+      sheetSlot.add(
+        new Text({
+          text: "Finish onboarding on your phone first — profile not found.",
+          fontSize: XR_PANEL.fsBody,
+          color: "rgba(251,113,133,0.95)",
+          textAlign: "center",
+        }),
+      );
+      return;
+    }
+
+    if (launcherKind === "cards") {
+      sheetSlot.add(mkPoiCategoryTabs());
+      sheetSlot.add(
+        new Container({
+          height: 10,
+          flexShrink: 0,
+        }),
+      );
+
+      const sorted = poiSortedForTab();
+      if (sorted.length === 0) {
+        sheetSlot.add(
+          new Text({
+            text: "No items in this category.",
+            fontSize: XR_PANEL.fsBody,
+            color: "rgba(161,161,170,1)",
+            textAlign: "center",
+          }),
+        );
+        return;
+      }
+      for (const x of sorted) {
+        sheetSlot.add(mkPoiRow(x.p, x.m));
+      }
+      return;
+    }
+
+    /* badges */
+    sheetSlot.add(mkBadgeSubTabs());
+    sheetSlot.add(new Container({ height: 8, flexShrink: 0 }));
+
+    const rides = rawPois.filter((p) => p.categoria === "attrazione" && p.badge);
+    const sbloccati = (() => {
+      try {
+        const raw = localStorage.getItem("badgesSbloccati");
+        const arr = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(arr)) return 0;
+        return rides.filter((p) => arr.includes(p.id)).length;
+      } catch {
+        return 0;
+      }
+    })();
+
+    if (badgeSub === "galleria") {
+      const grid = new Container({
+        width: XR_INNER_W,
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+        gap: 10,
+      });
+      const cellW = (XR_INNER_W - 10) / 2;
+      for (const a of rides) {
+        let unlocked = false;
+        try {
+          const raw = localStorage.getItem("badgesSbloccati");
+          const arr = raw ? JSON.parse(raw) : [];
+          unlocked = Array.isArray(arr) && arr.includes(a.id);
+        } catch {
+          unlocked = false;
+        }
+        const cell = new Container({
+          width: cellW,
+          minHeight: 120,
+          borderRadius: 16,
+          padding: 10,
+          backgroundColor: "rgba(0,0,0,0)",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.1)",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 8,
+        });
+        cell.add(
+          new UiImage({
+            src: stickerForRideId(a.id),
+            width: XR_PANEL.stickerImg,
+            height: XR_PANEL.stickerImg,
+            opacity: unlocked ? 0.9 : 0.35,
+            depthTest: false,
+            depthWrite: false,
+          }),
+        );
+        cell.add(
+          new Text({
+            text: a.nome,
+            fontSize: XR_PANEL.fsSmall,
+            color: "rgba(244,244,245,0.95)",
+            textAlign: "center",
+            maxWidth: cellW - 8,
+            wordBreak: "break-word",
+          }),
+        );
+        grid.add(cell);
+      }
+      sheetSlot.add(grid);
+      sheetSlot.add(
+        new Text({
+          text: `${sbloccati}/${rides.length} badges unlocked`,
+          fontSize: XR_PANEL.fsSmall,
+          color: "rgba(161,161,170,1)",
+          textAlign: "center",
+        }),
+      );
+      return;
+    }
+
+    /* scan */
+    const wrap = new Container({
+      width: XR_INNER_W,
+      minHeight: 280,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.1)",
+      backgroundColor: "rgba(0,0,0,0)",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 14,
+      padding: 16,
+    });
+    if (!scanNotice) {
+      const start = new Container({
+        paddingLeft: 22,
+        paddingRight: 22,
+        paddingTop: 12,
+        paddingBottom: 12,
+        borderRadius: 999,
+        backgroundColor: "rgba(24,24,27,0.82)",
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.1)",
+      });
+      (start as unknown as Object3D).userData = { xrUi: { k: "scanStart" } satisfies XrUi };
+      start.add(new Text({ text: "Start scanning", fontSize: XR_PANEL.fsBody, color: "white" }));
+      wrap.add(start);
+    } else {
+      wrap.add(
+        new Text({
+          text: "Camera scanning runs in flat mode.\nExit AR, then use Scan on your phone.",
+          fontSize: XR_PANEL.fsBody,
+          color: "rgba(228,228,231,0.95)",
+          textAlign: "center",
+        }),
+      );
+    }
+    sheetSlot.add(wrap);
+  }
+
+  function applySeasonParcoIfStale() {
+    if (Date.now() - lastQueueTimesOk < 10 * 60 * 1000) return;
+    const next = isParcoOpenNow() === false;
+    if (next !== parcoClosed) {
+      parcoClosed = next;
+      build();
+    }
+  }
+
+  async function fetchQueueTimes() {
+    const normalizeName = (s: string) =>
+      s
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ");
+
+    const normalizeRideName = (s: string) => {
+      const cleaned = String(s).replace(/^virtual\s*line:\s*/i, "").replace(/^virtualline:\s*/i, "");
+      return normalizeName(cleaned);
+    };
+
+    try {
+      const base = import.meta.env.DEV
+        ? "/queue-times"
+        : "https://queue-times-proxy.giuliafanasca.workers.dev/api/queue-times";
+      const res = await fetch(`${base}/parks/${PARCO.queue_times_park_id}/queue_times.json`);
+      if (!res.ok) return;
+
+      type QtRide = { name?: string; is_open?: boolean; wait_time?: number };
+      type QtLand = { rides?: QtRide[] };
+      const payload = (await res.json()) as { lands?: QtLand[] };
+      const lands = Array.isArray(payload.lands) ? payload.lands : [];
+      const rides: QtRide[] = [];
+      for (const l of lands) {
+        const rs = Array.isArray(l?.rides) ? l.rides : [];
+        rides.push(...rs);
+      }
+      if (rides.length === 0) return;
+
+      lastQueueTimesOk = Date.now();
+      parcoClosed = rides.every((r) => r && r.is_open === false);
+
+      const poiByNameKey = new Map<string, string>();
+      for (const p of rawPois) {
+        if (!p?.id || typeof p.nome !== "string") continue;
+        poiByNameKey.set(normalizeName(p.nome), p.id);
+      }
+
+      const updates = new Map<string, number>();
+      for (const r of rides) {
+        const name = typeof r?.name === "string" ? r.name : "";
+        if (!name) continue;
+        const poiId = poiByNameKey.get(normalizeRideName(name));
+        if (!poiId) continue;
+
+        if (r.is_open === false) {
+          updates.set(poiId, -1);
+          continue;
+        }
+        if (r.is_open !== true) continue;
+
+        const wait = typeof r.wait_time === "number" ? r.wait_time : null;
+        if (wait == null || !Number.isFinite(wait)) continue;
+        updates.set(poiId, Math.max(0, Math.round(wait)));
+      }
+
+      if (updates.size > 0) {
+        rawPois = rawPois.map((p) => {
+          const next = updates.get(p.id);
+          if (next == null) return p;
+          return { ...p, coda_minuti: next };
+        });
+      }
+
+      build();
+    } catch {
+      // ignore
+    }
+  }
+
+  const seasonParcoTimer = window.setInterval(() => {
+    applySeasonParcoIfStale();
+  }, 60 * 1000);
+
+  const queueTimesTimer = window.setInterval(() => {
+    void fetchQueueTimes();
+  }, 5 * 60 * 1000);
+
+  applySeasonParcoIfStale();
+  void fetchQueueTimes();
+
+  void fetch("/poi.json")
+    .then((r) => r.json())
+    .then((data) => {
+      if (Array.isArray(data)) {
+        rawPois = (data as Poi[]).filter((x) => x && typeof x.id === "string");
+        for (const p of rawPois) {
+          if (bellById[p.id] === undefined) bellById[p.id] = p.notifica_attiva === true;
+        }
+        persistBellMap(bellById);
+        build();
+        void fetchQueueTimes();
+      }
+    })
+    .catch(() => {
+      rawPois = [];
+      build();
+    });
+
+  if (followCam) world.camera.add(uiRoot);
+  else world.getPersistentRoot().add(uiRoot);
+
+  const dbgMeshes: Mesh[] = [];
+  if (debug) {
+    const root = world.getPersistentRoot();
+    const mk = (color: number, x: number, y: number, z: number, r: number) => {
+      const m = new Mesh(
+        new SphereGeometry(r, 18, 18),
+        new MeshBasicMaterial({ color, depthWrite: false, transparent: true, opacity: 0.95, side: DoubleSide }),
+      );
+      m.position.set(x, y, z);
+      root.add(m);
+      dbgMeshes.push(m);
+    };
+    mk(0xff3333, -0.35, 1.35, -0.35, 0.06);
+    mk(0xffdd33, 0.0, 1.35, -1.25, 0.06);
+    mk(0x33aaff, 0.35, 1.35, -3.0, 0.06);
+  }
+
+  const raycaster = new Raycaster();
+  const tmpPos = new Vector3();
+  const tmpQuat = new Quaternion();
+  const origin = new Vector3();
+  const dir = new Vector3();
+
+  let pinchDown = false;
+  let pinchStartX = 0;
+  let pinchStartUi: XrUi | null = null;
+
+  function hitTestFull(): { xrUi: XrUi | null; localX: number } {
+    const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
+    const refSpace = world.renderer?.xr?.getReferenceSpace?.();
+    const frame = world.renderer?.xr?.getFrame?.();
+    if (!s || !refSpace || !frame) return { xrUi: null, localX: 0 };
+    const src = world.input.getPrimaryInputSource("right") ?? world.input.getPrimaryInputSource("left") ?? s.inputSources?.[0];
+    if (!src) return { xrUi: null, localX: 0 };
+    const pose = frame.getPose(src.targetRaySpace, refSpace);
+    if (!pose) return { xrUi: null, localX: 0 };
+
+    origin.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
+    tmpQuat.set(
+      pose.transform.orientation.x,
+      pose.transform.orientation.y,
+      pose.transform.orientation.z,
+      pose.transform.orientation.w,
+    );
+    dir.set(0, 0, -1).applyQuaternion(tmpQuat).normalize();
+    raycaster.ray.origin.copy(origin);
+    raycaster.ray.direction.copy(dir);
+    raycaster.far = 12;
+
+    const hits = raycaster.intersectObject(uiRoot, true);
+    if (!hits.length) return { xrUi: null, localX: 0 };
+    const hit = hits[0]!;
+    const xrUi = readXrUi(hit.object);
+    const localPoint = uiRoot.worldToLocal(hit.point.clone());
+    const localX_m = localPoint.x * uiRoot.scale.x;
+    return { xrUi, localX: localX_m };
+  }
+
+  function handleTap(u: XrUi) {
+    switch (u.k) {
+      case "exit":
+        void opts.onExit();
+        return;
+      case "poiCat":
+        poiCat = u.cat;
+        build();
+        return;
+      case "badgeSub":
+        badgeSub = u.sub;
+        scanNotice = false;
+        build();
+        return;
+      case "bell": {
+        const next = !(bellById[u.id] === true);
+        bellById = { ...bellById, [u.id]: next };
+        persistBellMap(bellById);
+        build();
+        return;
+      }
+      case "nav": {
+        const poi = rawPois.find((p) => p.id === u.id);
+        hudEl.textContent = poi ? `Map / directions: open flat UI — ${poi.nome}` : "Map: use flat UI";
+        return;
+      }
+      case "scanStart":
+        scanNotice = true;
+        build();
+        return;
+      default:
+        return;
+    }
+  }
+
+  const onSelectStart = () => {
+    pinchDown = true;
+    const h = hitTestFull();
+    pinchStartX = h.localX;
+    pinchStartUi = h.xrUi;
+  };
+
+  const onSelectEnd = () => {
+    const endHit = hitTestFull();
+    const dx = endHit.localX - pinchStartX;
+
+    if (pinchStartUi?.k === "launcher") {
+      if (Math.abs(dx) > 0.1) {
+        launcherKind = dx > 0 ? "badge" : "cards";
+        sheetOpen = true;
+        build();
+      } else if (endHit.xrUi?.k === "launcher") {
+        sheetOpen = !sheetOpen;
+        build();
+      }
+    } else if (Math.abs(dx) < 0.03 && endHit.xrUi) {
+      handleTap(endHit.xrUi);
+    }
+
+    pinchDown = false;
+    pinchStartUi = null;
+  };
+
+  const attachHandlers = () => {
+    const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
+    if (!s) return false;
+    hideDom();
+    s.addEventListener("selectstart", onSelectStart);
+    s.addEventListener("selectend", onSelectEnd);
+    s.addEventListener("select", onSelectEnd as EventListener);
+    s.addEventListener("end", () => {
+      showDom();
+    });
+    return true;
+  };
+
+  const handlersTimer = window.setInterval(() => {
+    if (attachHandlers()) window.clearInterval(handlersTimer);
+  }, 200);
+
+  build();
+
+  let raf = 0;
+  let prev = 0;
+  let frames = 0;
+  const tick = (t: number) => {
+    raf = requestAnimationFrame(tick);
+    const delta = prev ? t - prev : 16;
+    prev = t;
+    if (!followCam) uiRoot.lookAt(world.camera.getWorldPosition(tmpPos));
+    if (pinchDown && pinchStartUi?.k === "launcher") {
+      const { localX } = hitTestFull();
+      const dx = localX - pinchStartX;
+      if (Math.abs(dx) > 0.1) {
+        const next = dx > 0 ? "badge" : "cards";
+        if (next !== launcherKind) {
+          launcherKind = next;
+          sheetOpen = true;
+          build();
+        }
+      }
+    }
+    uiRoot.update(delta);
+
+    frames++;
+    if (frames % 15 === 0) {
+      const cam = world.camera;
+      const wx = uiRoot.getWorldPosition(new Vector3());
+      const hint = opts.xrDomOverlayFallbackHint ?? "";
+      hudEl.textContent =
+        (hint ? `${hint}\n---\n` : "") +
+        `XR HUD\nsheet: ${sheetOpen ? launcherKind : "closed"} | poiTab: ${poiCat}\n` +
+        `parcoClosed: ${parcoClosed ? "yes" : "no"} | queueAge: ${lastQueueTimesOk ? `${Math.round((Date.now() - lastQueueTimesOk) / 1000)}s` : "never"}\n` +
+        `pois: ${rawPois.length}\n` +
+        `ui.scale: ${uiRoot.scale.x.toFixed(6)} z: ${uiRoot.position.z.toFixed(3)}\n` +
+        `cam: ${cam.position.x.toFixed(2)},${cam.position.y.toFixed(2)},${cam.position.z.toFixed(2)} | ui.world: ${wx.x.toFixed(2)},${wx.y.toFixed(2)},${wx.z.toFixed(2)}`;
+    }
+  };
+  raf = requestAnimationFrame(tick);
+
+  return () => {
+    cancelAnimationFrame(raf);
+    window.clearInterval(handlersTimer);
+    window.clearInterval(seasonParcoTimer);
+    window.clearInterval(queueTimesTimer);
+    const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
+    s?.removeEventListener("selectstart", onSelectStart);
+    s?.removeEventListener("selectend", onSelectEnd);
+    s?.removeEventListener("select", onSelectEnd as EventListener);
+    try {
+      uiRoot.dispose();
+    } catch {
+      // ignore
+    }
+    uiRoot.removeFromParent();
+    for (const m of dbgMeshes) {
+      try {
+        m.geometry.dispose();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (m.material as any)?.dispose?.();
+      } catch {
+        // ignore
+      }
+      m.removeFromParent();
+    }
+    showDom();
+  };
+}
