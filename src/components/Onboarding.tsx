@@ -7,6 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { Ruler, Sparkles, UtensilsCrossed, Zap } from "lucide-react";
+import { driftFloatClassName } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 
 export type Intensita = "bassa" | "media" | "alta";
@@ -386,7 +387,9 @@ export function Onboarding({ onComplete }: Props) {
                           <img
                             src="/spark-mascot.png"
                             alt=""
-                            className="spark-mascot-motion shrink-0 h-[clamp(5.5rem,26vw,9.5rem)] w-auto max-w-[min(42vw,168px)] object-contain object-left select-none pointer-events-none"
+                            className={driftFloatClassName(
+                              "shrink-0 h-[clamp(5.5rem,26vw,9.5rem)] w-auto max-w-[min(42vw,168px)] object-contain object-left select-none pointer-events-none",
+                            )}
                             draggable={false}
                           />
                           <div className="min-w-0 max-w-[min(52vw,260px)] space-y-1.5">
@@ -403,8 +406,10 @@ export function Onboarding({ onComplete }: Props) {
 
                     {step === 1 ? (
                       <div>
-                        <div className="text-sm font-semibold text-zinc-100">Height</div>
-                        <p className="mt-0.5 text-xs text-zinc-400">Used to filter rides.</p>
+                        <div className="text-sm font-semibold text-zinc-100">How tall are you?</div>
+                        <p className="mt-0.5 text-xs text-zinc-400">
+                          We&apos;ll filter the attractions you can actually ride.
+                        </p>
 
                         <HeightCenterCarousel
                           value={altezza}

@@ -8,6 +8,7 @@ import { calcolaDistanza, valutaTriggerAsciugatura } from "@/core/algorithm.js";
 import { valutaTuttiIPoi } from "@/core/notifications.js";
 import { PARCO } from "@/core/config.js";
 import type { Poi } from "@/types/poi";
+import { filterPoisByProfile } from "@/lib/poiFilter";
 import { FixedArtboard } from "@/components/FixedArtboard";
 
 function LauncherButton({
@@ -176,8 +177,28 @@ function LauncherButton({
 function App() {
   const [pois, setPois] = useState<Poi[]>([]);
   const poisRef = useRef<Poi[]>([]);
-  const [profilo, setProfilo] = useState<ProfiloUtente | null>(null);
-  const [bellById, setBellById] = useState<Record<string, boolean>>({});
+  const [profilo, setProfilo] = useState<ProfiloUtente | null>(() => {
+    try {
+      const raw = localStorage.getItem("profiloUtente");
+      if (!raw) return null;
+      const p = JSON.parse(raw) as unknown;
+      if (!p || typeof p !== "object") return null;
+      const o = p as Record<string, unknown>;
+      if (typeof o.altezza_cm !== "number" || !Array.isArray(o.intensita) || !Array.isArray(o.diete)) return null;
+      return p as ProfiloUtente;
+    } catch {
+      return null;
+    }
+  });
+  const [bellById, setBellById] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem("sparkBellById");
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === "object" ? (parsed as Record<string, boolean>) : {};
+    } catch {
+      return {};
+    }
+  });
   const [notificaAttiva, setNotificaAttiva] = useState<{
     poi: Poi;
     tipo: "attrazione" | "ristoro";
@@ -212,7 +233,19 @@ function App() {
     () => ({ lat: 45.4631, lng: 9.1894 }),
     [],
   );
-  const [posUtente, setPosUtente] = useState<Poi["posizione"] | null>(null);
+  const [posUtente, setPosUtente] = useState<Poi["posizione"] | null>(() => {
+    try {
+      const raw = localStorage.getItem("lastUserPos");
+      if (!raw) return null;
+      const p = JSON.parse(raw) as unknown;
+      if (!p || typeof p !== "object" || p === null) return null;
+      const o = p as Record<string, unknown>;
+      if (typeof o.lat === "number" && typeof o.lng === "number") return { lat: o.lat, lng: o.lng };
+    } catch {
+      // ignore
+    }
+    return null;
+  });
 
   const [parcoClosed, setParcoClosed] = useState<boolean>(false);
   const lastQueueTimesOkRef = useRef<number>(0);
@@ -254,6 +287,23 @@ function App() {
   useEffect(() => {
     poisRef.current = pois;
   }, [pois]);
+
+  useEffect(() => {
+    if (!profilo) return;
+    try {
+      localStorage.setItem("profiloUtente", JSON.stringify(profilo));
+    } catch {
+      // ignore
+    }
+  }, [profilo]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sparkBellById", JSON.stringify(bellById));
+    } catch {
+      // ignore
+    }
+  }, [bellById]);
 
   // Park open/closed logic (season + opening hours)
   useEffect(() => {
@@ -330,8 +380,15 @@ function App() {
         const loaded = Array.isArray(data) ? (data as Poi[]) : [];
         setPois(loaded);
         const initial: Record<string, boolean> = {};
+        try {
+          const raw = localStorage.getItem("sparkBellById");
+          const parsed = raw ? JSON.parse(raw) : {};
+          if (parsed && typeof parsed === "object") Object.assign(initial, parsed as Record<string, boolean>);
+        } catch {
+          // ignore
+        }
         for (const p of loaded) {
-          if (p && typeof p.id === "string") initial[p.id] = p.notifica_attiva === true;
+          if (p && typeof p.id === "string" && !(p.id in initial)) initial[p.id] = p.notifica_attiva === true;
         }
         setBellById(initial);
       })
@@ -432,7 +489,13 @@ function App() {
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) return;
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        setPosUtente({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setPosUtente(next);
+        try {
+          localStorage.setItem("lastUserPos", JSON.stringify(next));
+        } catch {
+          // ignore
+        }
       },
       () => {
         // Ignora errori: l'app resta usabile, ma le notifiche non partono senza posUtente.
@@ -448,36 +511,7 @@ function App() {
 
   const poisFiltrati: Poi[] = useMemo(() => {
     if (!profilo) return [];
-    const out: Poi[] = [];
-    for (const p of pois) {
-      if (!p || !p.id) continue;
-      if (p.categoria === "servizi" || p.categoria === "wc" || p.categoria === "asciugatura") {
-        out.push(p);
-        continue;
-      }
-
-      if (p.categoria === "attrazione") {
-        const i = (p as Poi)["intensità"];
-        // Only show rides matching onboarding intensity
-        if (i !== "bassa" && i !== "media" && i !== "alta") continue;
-        if (!profilo.intensita.includes(i)) continue;
-
-        const min = p.altezza_minima;
-        if (min != null && Number.isFinite(min) && profilo.altezza_cm < min) continue;
-
-        out.push(p);
-        continue;
-      }
-
-      if (p.categoria === "ristoro") {
-        const alimenti = Array.isArray(p.alimenti) ? p.alimenti : [];
-        const ok = profilo.diete.some((d) => alimenti.includes(d));
-        if (!ok) continue;
-        out.push(p);
-        continue;
-      }
-    }
-    return out;
+    return filterPoisByProfile(pois, profilo);
   }, [pois, profilo]);
 
   // Simula code dinamiche: ogni 90 secondi aggiorna coda_minuti dei POI nello stato React
