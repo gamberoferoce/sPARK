@@ -41,4 +41,4 @@ export const XR_CONTENT_H = 880;
 export const XR_ROW_W = Math.min(380, XR_INNER_W - 8);
 
 /** Uniform scale fallback (debug override `?xrUiScale=`). */
-export const XR_UI_SCALE_DEFAULT = 0.032;
+export const XR_UI_SCALE_DEFAULT = 0.064;
