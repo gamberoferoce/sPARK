@@ -31,7 +31,7 @@ const INTENSITA_LABEL_EN: Record<Intensita, string> = {
   alta: "High",
 };
 const DIETA_LABEL_EN: Record<Dieta, string> = {
-  normale: "Normal",
+  normale: "I eat everything",
   vegano: "Vegan",
   celiaco: "Gluten free",
 };
