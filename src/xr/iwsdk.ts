@@ -49,8 +49,8 @@ function ensureHtmlOverlay() {
   el.style.background = "rgba(0,0,0,0.65)";
   el.style.border = "1px solid rgba(255,255,255,0.18)";
   el.style.color = "rgba(255,255,255,0.92)";
-  el.style.font = "500 12px/1.35 Nunito, system-ui, -apple-system, Segoe UI, Roboto, Arial";
-  el.style.letterSpacing = "0.0125em";
+  el.style.font = "400 12px/1.35 Nunito, system-ui, -apple-system, Segoe UI, Roboto, Arial";
+  el.style.letterSpacing = "0.02em";
   el.style.pointerEvents = "none";
   document.body.appendChild(el);
   return el;
