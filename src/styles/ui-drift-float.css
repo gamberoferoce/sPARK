@@ -21,8 +21,23 @@
   will-change: transform;
 }
 
+/**
+ * Stesso loop dell’onboarding, solo mentre il genitore `.group` è in hover (es. sticker nella badge gallery).
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .group:hover .ui-drift-float-on-hover {
+    animation: ui-drift-float 3.8s ease-in-out infinite;
+    will-change: transform;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ui-drift-float {
+    animation: none;
+    will-change: auto;
+  }
+
+  .group:hover .ui-drift-float-on-hover {
     animation: none;
     will-change: auto;
   }

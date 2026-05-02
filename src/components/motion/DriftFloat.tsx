@@ -5,6 +5,12 @@ import { cn } from "@/lib/utils";
 /** Classe globale definita in `src/styles/ui-drift-float.css` (importata da `index.css`). */
 export const DRIFT_FLOAT_CLASS = "ui-drift-float";
 
+/**
+ * Stessi keyframes di {@link DRIFT_FLOAT_CLASS}, attivati da `.group:hover` (vedi `ui-drift-float.css`).
+ * Per immagini dentro tile con `className="group"`.
+ */
+export const DRIFT_FLOAT_ON_HOVER_CLASS = "ui-drift-float-on-hover";
+
 /** Unisce la classe di animazione ad altre classi Tailwind / condizionali. */
 export function driftFloatClassName(...parts: Array<string | undefined | false>) {
   return cn(DRIFT_FLOAT_CLASS, ...parts);
