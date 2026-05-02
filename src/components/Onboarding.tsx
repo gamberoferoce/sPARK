@@ -6,7 +6,7 @@ import {
   type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { Ruler, Sparkles, UtensilsCrossed, Zap } from "lucide-react";
+import { Flame, Ruler, Sparkles, UtensilsCrossed } from "lucide-react";
 import { driftFloatClassName } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 
@@ -36,7 +36,7 @@ const DIETA_LABEL_EN: Record<Dieta, string> = {
   celiaco: "Gluten free",
 };
 
-const STEP_ICONS = [Sparkles, Ruler, UtensilsCrossed, Zap] as const;
+const STEP_ICONS = [Sparkles, Ruler, UtensilsCrossed, Flame] as const;
 
 const HEIGHT_MIN = 90;
 const HEIGHT_MAX = 210;
