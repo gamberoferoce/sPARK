@@ -6,7 +6,7 @@ import type { ProfiloUtente } from "@/components/Onboarding";
 import { calcolaDistanza } from "@/core/algorithm.js";
 import { PARCO } from "@/core/config.js";
 import { filterPoisByProfile } from "@/lib/poiFilter";
-import { applySimulatedServiceQueues } from "@/lib/simulatedServiceQueues";
+import { applySimulatedServiceQueues, SERVICE_QUEUE_FREEZE_ATTR_CLOSED_RATIO } from "@/lib/simulatedServiceQueues";
 import type { Poi } from "@/types/poi";
 
 import {
@@ -255,7 +255,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   let profilo = loadProfilo();
   let bellById = loadBellMap();
   let userPos = loadLastPos();
-  let parcoClosed = !isParcoOpenNow();
+  let freezeServiceQueues = !isParcoOpenNow();
   /** Last successful Queue-Times fetch — mirrors App `lastQueueTimesOkRef` for season fallback window. */
   let lastQueueTimesOk = 0;
   let rawPois: Poi[] = [];
@@ -470,12 +470,14 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     const coda = Number(p.coda_minuti);
     const hasCoda = Number.isFinite(coda);
     const bellOn = bellById[p.id] === true;
-    const isClosed = parcoClosed || coda === -1;
+    const isService =
+      p.categoria === "ristoro" || p.categoria === "wc" || p.categoria === "asciugatura";
+    const isClosed = isService ? freezeServiceQueues || coda === -1 : coda === -1;
     const showWait =
       (poiCat === "attrazione" || poiCat === "ristoro" || (poiCat === "servizi" && (p.categoria === "wc" || p.categoria === "asciugatura"))) &&
       hasCoda &&
       coda >= 0 &&
-      !parcoClosed;
+      !(isService && freezeServiceQueues);
 
     const row = new Container({
       width: XR_ROW_W,
@@ -868,9 +870,9 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   function applySeasonParcoIfStale() {
     if (Date.now() - lastQueueTimesOk < 10 * 60 * 1000) return;
     const next = isParcoOpenNow() === false;
-    if (next !== parcoClosed) {
-      parcoClosed = next;
-      rawPois = applySimulatedServiceQueues(rawPois, parcoClosed);
+    if (next !== freezeServiceQueues) {
+      freezeServiceQueues = next;
+      rawPois = applySimulatedServiceQueues(rawPois, freezeServiceQueues);
       build();
     }
   }
@@ -907,13 +909,28 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       if (rides.length === 0) return;
 
       lastQueueTimesOk = Date.now();
-      parcoClosed = rides.every((r) => r && r.is_open === false);
 
       const poiByNameKey = new Map<string, string>();
       for (const p of rawPois) {
         if (!p?.id || typeof p.nome !== "string") continue;
         poiByNameKey.set(normalizeName(p.nome), p.id);
       }
+
+      let attrazioniQt = 0;
+      let attrazioniChiuseQt = 0;
+      for (const r of rides) {
+        const name = typeof r?.name === "string" ? r.name : "";
+        if (!name) continue;
+        const poiId = poiByNameKey.get(normalizeRideName(name));
+        if (!poiId) continue;
+        const poi = rawPois.find((x) => x.id === poiId);
+        if (!poi || poi.categoria !== "attrazione") continue;
+        attrazioniQt++;
+        if (r.is_open === false) attrazioniChiuseQt++;
+      }
+      freezeServiceQueues =
+        attrazioniQt > 0 &&
+        attrazioniChiuseQt / attrazioniQt >= SERVICE_QUEUE_FREEZE_ATTR_CLOSED_RATIO;
 
       const updates = new Map<string, number>();
       for (const r of rides) {
@@ -941,7 +958,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         });
       }
 
-      rawPois = applySimulatedServiceQueues(rawPois, parcoClosed);
+      rawPois = applySimulatedServiceQueues(rawPois, freezeServiceQueues);
 
       build();
     } catch {
@@ -958,7 +975,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   }, 5 * 60 * 1000);
 
   const serviceQueueSimTimer = window.setInterval(() => {
-    rawPois = applySimulatedServiceQueues(rawPois, parcoClosed);
+    rawPois = applySimulatedServiceQueues(rawPois, freezeServiceQueues);
     build();
   }, 90 * 1000);
 
@@ -974,7 +991,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
           if (bellById[p.id] === undefined) bellById[p.id] = p.notifica_attiva === true;
         }
         persistBellMap(bellById);
-        rawPois = applySimulatedServiceQueues(rawPois, parcoClosed);
+        rawPois = applySimulatedServiceQueues(rawPois, freezeServiceQueues);
         build();
         void fetchQueueTimes();
       }
@@ -1154,7 +1171,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       hudEl.textContent =
         (hint ? `${hint}\n---\n` : "") +
         `XR HUD\nsheet: ${sheetOpen ? launcherKind : "closed"} | poiTab: ${poiCat}\n` +
-        `parcoClosed: ${parcoClosed ? "yes" : "no"} | queueAge: ${lastQueueTimesOk ? `${Math.round((Date.now() - lastQueueTimesOk) / 1000)}s` : "never"}\n` +
+        `freezeSvc: ${freezeServiceQueues ? "yes" : "no"} | queueAge: ${lastQueueTimesOk ? `${Math.round((Date.now() - lastQueueTimesOk) / 1000)}s` : "never"}\n` +
         `pois: ${rawPois.length}\n` +
         `ui.scale: ${uiRoot.scale.x.toFixed(6)} y: ${uiRoot.position.y.toFixed(3)} z: ${uiRoot.position.z.toFixed(3)}\n` +
         `cam: ${cam.position.x.toFixed(2)},${cam.position.y.toFixed(2)},${cam.position.z.toFixed(2)} | ui.world: ${wx.x.toFixed(2)},${wx.y.toFixed(2)},${wx.z.toFixed(2)}`;
