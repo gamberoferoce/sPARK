@@ -1212,10 +1212,12 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   function pickLayout2D(px: number, py: number): XrUi | null {
     const padLeft = (XR_PANEL.w - XR_INNER_W) / 2;
     const sheetTop = XR_PANEL.launcherSlot + XR_PANEL.gapLauncherSheet;
-    const bs = 40;
-    const lx = (XR_PANEL.w - bs) / 2;
-    const ly = (XR_PANEL.launcherSlot - bs) / 2;
-    if (px >= lx && px <= lx + bs && py >= ly && py <= ly + bs) {
+    /**
+     * Fascia alta = intera riga launcher + gap flex prima dello sheet (stesso blocco visivo del desktop).
+     * Il cerchio è 40×40 ma il movimento relativo del pinch sposta il cursore: un hit solo sul cerchio falliva
+     * quasi sempre e non faceva mai `sheetOpen = !sheetOpen`.
+     */
+    if (px >= 0 && px <= XR_PANEL.w && py >= 0 && py < sheetTop) {
       return { k: "launcher" };
     }
 
