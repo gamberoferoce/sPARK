@@ -223,39 +223,12 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   const uiProbe = flagParam("xrUiProbe");
   const followCam = !flagParam("xrWorldUi");
 
-  const xrDomUIKitFallback =
-    opts.xrDomOverlayFallbackHint != null && opts.xrDomOverlayFallbackHint !== "";
-
-  const STYLE_HIDE_FLAT_ID = "xr-spark-flat-hide-style";
-  if (!document.getElementById(STYLE_HIDE_FLAT_ID)) {
-    const st = document.createElement("style");
-    st.id = STYLE_HIDE_FLAT_ID;
-    st.textContent =
-      "#root.xr-spark-hide-flat{opacity:0!important;visibility:hidden!important;pointer-events:none!important}";
-    document.head.appendChild(st);
-  }
-
-  /** Senza DOM overlay il canvas XR deve stare sopra al piano React; `ensureContainer` usa z-index 0. */
-  const xrSceneEl = document.getElementById("xr-scene") as HTMLElement | null;
-  let xrSceneZInlineRestore = "";
-  if (xrDomUIKitFallback && xrSceneEl) {
-    xrSceneZInlineRestore = xrSceneEl.style.zIndex;
-    xrSceneEl.style.zIndex = "42";
-  }
-
   const rootEl = document.getElementById("root");
   const hideDom = () => {
-    if (!rootEl) return;
-    if (xrDomUIKitFallback) {
-      rootEl.classList.add("xr-spark-hide-flat");
-    } else {
-      rootEl.style.display = "none";
-    }
+    if (rootEl) rootEl.style.display = "none";
   };
   const showDom = () => {
-    if (!rootEl) return;
-    rootEl.classList.remove("xr-spark-hide-flat");
-    rootEl.style.display = "";
+    if (rootEl) rootEl.style.display = "";
   };
 
   let launcherKind: XRKind = (() => {
@@ -1228,9 +1201,6 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   raf = requestAnimationFrame(tick);
 
   return () => {
-    if (xrDomUIKitFallback && xrSceneEl) {
-      xrSceneEl.style.zIndex = xrSceneZInlineRestore;
-    }
     cancelAnimationFrame(raf);
     window.clearInterval(handlersTimer);
     window.clearInterval(seasonParcoTimer);
