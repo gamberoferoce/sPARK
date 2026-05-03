@@ -2,9 +2,10 @@ import {
   SessionMode,
   World,
   buildSessionInit,
-  launchXR,
   normalizeReferenceSpec,
   resolveReferenceSpaceType,
+  type XROptions,
+  type XRFeatureOptions,
 } from "@iwsdk/core";
 
 import { mountDesktopLikeSparkUi } from "./sparkUiMount";
@@ -131,6 +132,50 @@ async function attachXRSession(world: World, session: XRSession) {
   }
 }
 
+/**
+ * Stesso merge di `launchXR` in `@iwsdk/core` (non esportato): unisce `world.xrDefaults` e override.
+ * `launchXR` internamente non è awaitable e non propaga errori di `requestSession` → usiamo questo + await.
+ */
+function mergeWorldXrOptions(world: World, overrides: Partial<XROptions>): XROptions {
+  const base = world.xrDefaults;
+  const featBase = base?.features;
+  const featOver = overrides.features;
+  const features =
+    featBase || featOver ? { ...(featBase ?? {}), ...(featOver ?? {}) } : undefined;
+  return {
+    sessionMode: overrides.sessionMode ?? base?.sessionMode ?? SessionMode.ImmersiveAR,
+    referenceSpace: overrides.referenceSpace ?? base?.referenceSpace,
+    features,
+  };
+}
+
+/**
+ * Richiede `immersive-ar` e collega la sessione al renderer (stesso percorso di `launchXR`, ma in await).
+ * Se la prima negoziazione fallisce, un secondo tentativo solo con `local-floor` (alcuni runtime AR sono selettivi).
+ */
+async function launchImmersiveArAwait(world: World, featureOverrides: XRFeatureOptions): Promise<void> {
+  const merged = mergeWorldXrOptions(world, {
+    sessionMode: SessionMode.ImmersiveAR,
+    features: featureOverrides,
+  });
+  const sessionInit = buildSessionInit(merged);
+  let session: XRSession;
+  try {
+    session = await navigator.xr!.requestSession(SessionMode.ImmersiveAR, sessionInit);
+  } catch (firstErr) {
+    console.warn("[XR] requestSession (full init) failed, retrying with minimal optional features:", firstErr);
+    try {
+      session = await navigator.xr!.requestSession(SessionMode.ImmersiveAR, {
+        optionalFeatures: ["local-floor"] as const,
+      } as XRSessionInit);
+    } catch {
+      if (firstErr instanceof Error) throw firstErr;
+      throw new Error(String(firstErr));
+    }
+  }
+  await attachXRSession(world, session);
+}
+
 async function getWorld() {
   if (worldPromise) return await worldPromise;
   const container = ensureContainer();
@@ -201,9 +246,9 @@ export async function enterAR() {
     throw new Error("Missing #root element for DOM overlay.");
   }
 
-  const xrFeatures = {
-    handTracking: { required: false } as const,
-    layers: true as const,
+  /** Solo optional flags espliciti; `buildSessionInit` aggiunge già local-floor / bounded-floor / layers come da IWSDK. */
+  const xrFeatures: XRFeatureOptions = {
+    handTracking: { required: false },
   };
 
   // Skip DOM-overlay attempt (e.g. known Quest Browser limitation — see Meta community “DOM overlay Quest”).
@@ -211,10 +256,7 @@ export async function enterAR() {
     xrDomOverlayFallbackHint =
       "xrSkipDomOverlay: uso solo pannello UIKit (DOM overlay non richiesto).\n";
     await endActiveSessionIfAny(w);
-    launchXR(w, {
-      sessionMode: SessionMode.ImmersiveAR,
-      features: xrFeatures,
-    });
+    await launchImmersiveArAwait(w, xrFeatures);
     startWorldSpaceDesktopLikeUi(w);
     return;
   }
@@ -286,10 +328,7 @@ export async function enterAR() {
 
   await endActiveSessionIfAny(w);
 
-  launchXR(w, {
-    sessionMode: SessionMode.ImmersiveAR,
-    features: xrFeatures,
-  });
+  await launchImmersiveArAwait(w, xrFeatures);
   startWorldSpaceDesktopLikeUi(w);
 }
 
