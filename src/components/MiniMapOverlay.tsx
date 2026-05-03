@@ -1,4 +1,5 @@
 import { calcolaDistanza } from "@/core/algorithm.js";
+import { driftFloatClassName } from "@/components/motion";
 import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Poi } from "@/types/poi";
@@ -43,8 +44,16 @@ export function MiniMapOverlay({ open, posUtente, destinazione, onClose }: Props
             <div className="mt-0.5 text-xs text-zinc-400">{distanzaLabel}</div>
           </div>
         ) : (
-          <div className="mb-3 w-[200px] text-center text-sm text-zinc-200">
-            This functionality will be available soon.
+          <div className="mb-3 flex w-[min(280px,90vw)] flex-col items-center gap-2 text-center">
+            <img
+              src="/feature-unavailable-fox.png"
+              alt=""
+              className={driftFloatClassName(
+                "pointer-events-none h-[clamp(4.5rem,22vw,7rem)] w-auto max-w-[min(200px,72vw)] select-none object-contain",
+              )}
+              draggable={false}
+            />
+            <p className="text-sm leading-snug text-zinc-200">This feature is not yet available</p>
           </div>
         )}
 
