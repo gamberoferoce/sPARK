@@ -210,13 +210,6 @@ function parseFloatParam(name: string, fallback: number) {
 
 export type MountSparkUiOpts = {
   xrDomOverlayFallbackHint?: string | null;
-  /**
-   * Ritarda `display:none` su `#root` dopo l’attach alla sessione XR.
-   * Sul fallback UIKit (senza DOM overlay) nascondere il DOM subito lascia solo passthrough + mesh:
-   * se il primo frame del pannello non è ancora “presente”, sembra schermo vuoto.
-   * Default: ~650ms quando `xrDomOverlayFallbackHint` è valorizzato, altrimenti 0.
-   */
-  deferHideDomMs?: number;
 };
 
 export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): () => void {
@@ -230,32 +223,39 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   const uiProbe = flagParam("xrUiProbe");
   const followCam = !flagParam("xrWorldUi");
 
+  const xrDomUIKitFallback =
+    opts.xrDomOverlayFallbackHint != null && opts.xrDomOverlayFallbackHint !== "";
+
+  const STYLE_HIDE_FLAT_ID = "xr-spark-flat-hide-style";
+  if (!document.getElementById(STYLE_HIDE_FLAT_ID)) {
+    const st = document.createElement("style");
+    st.id = STYLE_HIDE_FLAT_ID;
+    st.textContent =
+      "#root.xr-spark-hide-flat{opacity:0!important;visibility:hidden!important;pointer-events:none!important}";
+    document.head.appendChild(st);
+  }
+
+  /** Senza DOM overlay il canvas XR deve stare sopra al piano React; `ensureContainer` usa z-index 0. */
+  const xrSceneEl = document.getElementById("xr-scene") as HTMLElement | null;
+  let xrSceneZInlineRestore = "";
+  if (xrDomUIKitFallback && xrSceneEl) {
+    xrSceneZInlineRestore = xrSceneEl.style.zIndex;
+    xrSceneEl.style.zIndex = "42";
+  }
+
   const rootEl = document.getElementById("root");
   const hideDom = () => {
-    if (rootEl) rootEl.style.display = "none";
+    if (!rootEl) return;
+    if (xrDomUIKitFallback) {
+      rootEl.classList.add("xr-spark-hide-flat");
+    } else {
+      rootEl.style.display = "none";
+    }
   };
   const showDom = () => {
-    if (rootEl) rootEl.style.display = "";
-  };
-
-  const deferHideDomResolved =
-    opts.deferHideDomMs ??
-    (opts.xrDomOverlayFallbackHint != null && opts.xrDomOverlayFallbackHint !== "" ? 650 : 0);
-  let hideDomTimer = 0;
-
-  const scheduleHideDom = () => {
-    if (hideDomTimer) {
-      window.clearTimeout(hideDomTimer);
-      hideDomTimer = 0;
-    }
-    if (deferHideDomResolved > 0) {
-      hideDomTimer = window.setTimeout(() => {
-        hideDomTimer = 0;
-        hideDom();
-      }, deferHideDomResolved);
-    } else {
-      hideDom();
-    }
+    if (!rootEl) return;
+    rootEl.classList.remove("xr-spark-hide-flat");
+    rootEl.style.display = "";
   };
 
   let launcherKind: XRKind = (() => {
@@ -1169,15 +1169,11 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   const attachHandlers = () => {
     const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
     if (!s) return false;
-    scheduleHideDom();
+    hideDom();
     s.addEventListener("selectstart", onSelectStart);
     s.addEventListener("selectend", onSelectEnd);
     s.addEventListener("select", onSelectEnd as EventListener);
     s.addEventListener("end", () => {
-      if (hideDomTimer) {
-        window.clearTimeout(hideDomTimer);
-        hideDomTimer = 0;
-      }
       showDom();
     });
     return true;
@@ -1232,9 +1228,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   raf = requestAnimationFrame(tick);
 
   return () => {
-    if (hideDomTimer) {
-      window.clearTimeout(hideDomTimer);
-      hideDomTimer = 0;
+    if (xrDomUIKitFallback && xrSceneEl) {
+      xrSceneEl.style.zIndex = xrSceneZInlineRestore;
     }
     cancelAnimationFrame(raf);
     window.clearInterval(handlersTimer);
