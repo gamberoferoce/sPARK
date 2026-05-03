@@ -1411,9 +1411,16 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       } else if (endHit.xrUi?.k === "launcher") {
         sheetOpen = !sheetOpen;
         build();
+      } else if (sameHand && endHit.xrUi) {
+        // Pinch-cursor: si parte sempre dal launcher; il tap vero è dove rilasci (tab, POI, ecc.).
+        handleTap(endHit.xrUi);
       }
-    } else if (sameHand && Math.abs(dx) < 0.03 && endHit.xrUi) {
-      handleTap(endHit.xrUi);
+    } else if (sameHand && endHit.xrUi) {
+      // Modalità ray: ignora “tap” se la mira è scivolata molto in orizzontale (drag).
+      // Pinch-cursor: niente soglia su dx (il cursore si è già mosso in pixel).
+      if (!useRayPick || Math.abs(dx) < 0.03) {
+        handleTap(endHit.xrUi);
+      }
     }
 
     pinchDown = false;
