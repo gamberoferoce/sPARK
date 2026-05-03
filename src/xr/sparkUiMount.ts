@@ -1128,111 +1128,11 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   let pinchStartCursorX = cursorX;
   const lastHandWorld = new Vector3();
   const panelWorldScratch = new Vector3();
+  const camToPanelScratch = new Vector3();
 
-  /** Pixel orizzontale → metro lungo asse X locale del pannello (come il vecchio hit da mesh). */
-  function layoutLocalXFromPx(px: number): number {
-    return (px - XR_PANEL.w / 2) * XR_PIXEL_SIZE * uiRoot.scale.x;
-  }
-
-  /** Hit test 2D sul foglio “cards” (coord. contenuto scrollabile, origine alto-sinistra dello sheet). */
-  function pickCardsSheetContent(cx: number, cy: number): XrUi | null {
-    const GAP = 10;
-    const TAB_H = 44;
-    const TAB_GAP = 8;
-    const inner = XR_INNER_W;
-    const tw = (inner - 2 * TAB_GAP) / 3;
-    const cats: PoiCat[] = ["attrazione", "ristoro", "servizi"];
-
-    let y = 0;
-    if (cy >= y && cy < y + TAB_H) {
-      let x = 0;
-      for (let i = 0; i < 3; i++) {
-        if (cx >= x && cx < x + tw) return { k: "poiCat", cat: cats[i]! };
-        x += tw + TAB_GAP;
-      }
-      return null;
-    }
-    y += TAB_H + GAP;
-    if (cy >= y && cy < y + 10) return null;
-    y += 10 + GAP;
-
-    const sorted = poiSortedForTab();
-    const ROW_H = 80;
-    const rowLeft = (inner - XR_ROW_W) / 2;
-
-    for (let idx = 0; idx < sorted.length; idx++) {
-      if (cy >= y && cy < y + ROW_H) {
-        const p = sorted[idx]!.p;
-        const rx = cx - rowLeft;
-        if (rx < 0 || rx > XR_ROW_W) return null;
-        const navLeft = XR_ROW_W - 36;
-        const bellLeft = XR_ROW_W - 36 - 8 - 36;
-        if (rx >= navLeft && rx <= XR_ROW_W) return { k: "nav", id: p.id };
-        if (rx >= bellLeft && rx < navLeft) return { k: "bell", id: p.id };
-        return null;
-      }
-      y += ROW_H + GAP;
-    }
-    return null;
-  }
-
-  /** Hit test 2D sul foglio “badges”. */
-  function pickBadgesSheetContent(cx: number, cy: number): XrUi | null {
-    const GAP = 10;
-    const inner = XR_INNER_W;
-    let y = 0;
-    const TAB_H = 44;
-    if (cy >= y && cy < y + TAB_H) {
-      const totalW = 120 + 10 + 120;
-      const startX = (inner - totalW) / 2;
-      if (cx >= startX && cx < startX + 120) return { k: "badgeSub", sub: "galleria" };
-      if (cx >= startX + 130 && cx < startX + 250) return { k: "badgeSub", sub: "scansiona" };
-      return null;
-    }
-    y += TAB_H + GAP;
-    if (cy >= y && cy < y + 8) return null;
-    y += 8 + GAP;
-
-    if (badgeSub === "galleria") return null;
-
-    if (!scanNotice) {
-      const btnW = 240;
-      const btnH = 52;
-      const btnLeft = (inner - btnW) / 2;
-      const btnTop = y + 72;
-      if (cx >= btnLeft && cx < btnLeft + btnW && cy >= btnTop && cy < btnTop + btnH) {
-        return { k: "scanStart" };
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Punto indicato dal cursore (pinch): **solo** layout 2D + scroll, **nessun** {@link Raycaster}.
-   * Coord. panel: (0,0) alto-sinistra del root {@link uiRoot}, come {@link cursorX}/{@link cursorY}.
-   */
-  function pickLayout2D(px: number, py: number): XrUi | null {
-    const padLeft = (XR_PANEL.w - XR_INNER_W) / 2;
-    const sheetTop = XR_PANEL.launcherSlot + XR_PANEL.gapLauncherSheet;
-    /**
-     * Fascia alta = intera riga launcher + gap flex prima dello sheet (stesso blocco visivo del desktop).
-     * Il cerchio è 40×40 ma il movimento relativo del pinch sposta il cursore: un hit solo sul cerchio falliva
-     * quasi sempre e non faceva mai `sheetOpen = !sheetOpen`.
-     */
-    if (px >= 0 && px <= XR_PANEL.w && py >= 0 && py < sheetTop) {
-      return { k: "launcher" };
-    }
-
-    if (!sheetOpen || !profilo) return null;
-    if (py < sheetTop || py > sheetTop + XR_CONTENT_H) return null;
-    if (px < padLeft || px > padLeft + XR_INNER_W) return null;
-
-    const scrollY = sheetSlot.scrollPosition.value?.[1] ?? 0;
-    const cx = px - padLeft;
-    const cy = py - sheetTop + scrollY;
-
-    if (launcherKind === "cards") return pickCardsSheetContent(cx, cy);
-    return pickBadgesSheetContent(cx, cy);
+  /** Metro lungo X del pannello per soglie swipe quando non c’è hit mesh (fallback). */
+  function pinchSwipeLocalXFromCursor(): number {
+    return (cursorX - XR_PANEL.w / 2) * XR_PIXEL_SIZE * uiRoot.scale.x;
   }
 
   /**
@@ -1294,17 +1194,42 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     return target;
   }
 
-  /** Pick pinch: layout 2D + scroll, niente raycast Three.js. */
-  function hitTestLayoutPickDetail(): {
+  /**
+   * Risolve cosa hai “under” (`userData.xrUi`) usando la **geom reale UIKit** (hit test delle mesh —
+   * scroll/layout Yoga come nell’overlay nativo dell’SDK). Direzione ~ occhio→punto cursore sul pannello:
+   * la mano continua solo a muovere (cursorX, cursorY).
+   */
+  function hitTestCursorPickDetail(): {
     xrUi: XrUi | null;
     localX: number;
     hitPoint: Vector3 | null;
   } {
-    const xrUi = pickLayout2D(cursorX, cursorY);
-    const localX = layoutLocalXFromPx(cursorX);
+    const cam = world.camera;
     panelPixelToWorld(cursorX, cursorY, panelWorldScratch);
-    const hitPoint = xrUi ? panelWorldScratch.clone() : null;
-    return { xrUi, localX, hitPoint };
+    camToPanelScratch.copy(panelWorldScratch).sub(cam.position);
+    if (camToPanelScratch.lengthSq() < 1e-12) {
+      return { xrUi: null, localX: pinchSwipeLocalXFromCursor(), hitPoint: null };
+    }
+
+    raycaster.ray.origin.copy(cam.position);
+    raycaster.ray.direction.copy(camToPanelScratch.normalize());
+    raycaster.far = 24;
+
+    Object3D.prototype.updateMatrixWorld.call(uiRoot as Object3D, true);
+    const hits = raycaster.intersectObject(uiRoot, true);
+    if (!hits.length) {
+      return { xrUi: null, localX: pinchSwipeLocalXFromCursor(), hitPoint: null };
+    }
+
+    const hit = hits[0]!;
+    const xrUi = readXrUi(hit.object);
+    const localPoint = uiRoot.worldToLocal(hit.point.clone());
+    const localX_m = localPoint.x * uiRoot.scale.x;
+    return {
+      xrUi,
+      localX: localX_m,
+      hitPoint: hit.point.clone(),
+    };
   }
 
   function hitTestFull(
@@ -1312,7 +1237,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     inputSourceOverride?: XRInputSource | null,
   ): { xrUi: XrUi | null; localX: number } {
     if (useRayPick) return hitTestRay(frameOverride, inputSourceOverride);
-    const d = hitTestLayoutPickDetail();
+    const d = hitTestCursorPickDetail();
     return { xrUi: d.xrUi, localX: d.localX };
   }
 
@@ -1343,7 +1268,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         cursorReticle.visible = false;
         return;
       }
-      const det = hitTestLayoutPickDetail();
+      const det = hitTestCursorPickDetail();
       panelPixelToWorld(cursorX, cursorY, panelWorldScratch);
       cursorReticle.position.copy(panelWorldScratch);
       cursorReticle.visible = true;
@@ -1477,7 +1402,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         }
       }
       pinchStartUi = { k: "launcher" };
-      pinchStartX = layoutLocalXFromPx(cursorX);
+      pinchStartX = pinchSwipeLocalXFromCursor();
     } else {
       const h = hitTestFull(e.frame, e.inputSource);
       pinchStartX = h.localX;
@@ -1523,11 +1448,14 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
           build();
         } else if (sameHand && endHit.xrUi) {
           handleTap(endHit.xrUi);
-        } else if (!useRayPick && sameHand && swipeCards === null) {
-          /**
-           * Zero-ray: non deve esistere il caso “rilascio e non succede nulla”.
-           * Se non abbiamo un target valido al rilascio, interpretiamo come tap sul launcher.
-           */
+        } else if (
+          !useRayPick &&
+          sameHand &&
+          swipeCards === null &&
+          !endHit.xrUi &&
+          cursorY < XR_PANEL.launcherSlot + XR_PANEL.gapLauncherSheet
+        ) {
+          /** Fascia alta senza mesh (gap): stesso intento del toggle desktop. */
           sheetOpen = !sheetOpen;
           build();
         }
