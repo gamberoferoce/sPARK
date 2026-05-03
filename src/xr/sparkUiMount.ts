@@ -1115,6 +1115,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   let pinchStartUi: XrUi | null = null;
   /** Mano che ha iniziato il pinch (per drag launcher + ray nel tick). */
   let pinchRaySource: XRInputSource | null = null;
+  /** Evita doppia esecuzione: WebXR emette `select` e poi `selectend` con lo stesso gesto. */
+  let pinchReleaseHandled = false;
 
   /** `false` = cursore 2D sul pannello mosso dal pinch (default). `true` = ray dal controller (`?xrRayPick`). */
   const useRayPick = flagParam("xrRayPick");
@@ -1456,6 +1458,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
 
   const onSelectStart = (ev: Event) => {
     const e = ev as XRInputSourceEvent;
+    pinchReleaseHandled = false;
     pinchDown = true;
     pinchRaySource = e.inputSource ?? null;
     const refSpace = world.renderer?.xr?.getReferenceSpace?.();
@@ -1482,45 +1485,75 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     }
   };
 
-  const onSelectEnd = (ev: Event) => {
-    const e = ev as XRInputSourceEvent;
-    const endHit = hitTestFull(e.frame, e.inputSource);
-    const dx = endHit.localX - pinchStartX;
-    const sameHand =
-      !pinchRaySource ||
-      !e.inputSource ||
-      pinchRaySource === e.inputSource ||
-      pinchRaySource.handedness === e.inputSource.handedness;
-
-    if (pinchStartUi?.k === "launcher") {
-      const swipeCards =
-        useRayPick && Math.abs(dx) > 0.1
-          ? dx > 0
-          : !useRayPick && Math.abs(cursorX - pinchStartCursorX) > 55
-            ? cursorX > pinchStartCursorX
-            : null;
-      if (swipeCards !== null) {
-        launcherKind = swipeCards ? "badge" : "cards";
-        sheetOpen = true;
-        build();
-      } else if (endHit.xrUi?.k === "launcher") {
-        sheetOpen = !sheetOpen;
-        build();
-      } else if (sameHand && endHit.xrUi) {
-        // Pinch-cursor: si parte sempre dal launcher; il tap vero è dove rilasci (tab, POI, ecc.).
-        handleTap(endHit.xrUi);
-      }
-    } else if (sameHand && endHit.xrUi) {
-      // Modalità ray: ignora “tap” se la mira è scivolata molto in orizzontale (drag).
-      // Pinch-cursor: niente soglia su dx (il cursore si è già mosso in pixel).
-      if (!useRayPick || Math.abs(dx) < 0.03) {
-        handleTap(endHit.xrUi);
-      }
-    }
-
+  const resetPinchGestureState = () => {
     pinchDown = false;
     pinchStartUi = null;
     pinchRaySource = null;
+  };
+
+  /**
+   * Chiusura gesto (tap / swipe / toggle). Va eseguita **una sola volta** per pinch:
+   * la sessione XR invia sia {@link XRSession#select} sia {@link XRSession#selectend}.
+   */
+  const runPrimaryRelease = (e: XRInputSourceEvent) => {
+    if (!pinchReleaseHandled) {
+      pinchReleaseHandled = true;
+
+      const endHit = hitTestFull(e.frame, e.inputSource);
+      const dx = endHit.localX - pinchStartX;
+      const sameHand =
+        !pinchRaySource ||
+        !e.inputSource ||
+        pinchRaySource === e.inputSource ||
+        pinchRaySource.handedness === e.inputSource.handedness;
+
+      if (pinchStartUi?.k === "launcher") {
+        const swipeCards =
+          useRayPick && Math.abs(dx) > 0.1
+            ? dx > 0
+            : !useRayPick && Math.abs(cursorX - pinchStartCursorX) > 55
+              ? cursorX > pinchStartCursorX
+              : null;
+        if (swipeCards !== null) {
+          launcherKind = swipeCards ? "badge" : "cards";
+          sheetOpen = true;
+          build();
+        } else if (endHit.xrUi?.k === "launcher") {
+          sheetOpen = !sheetOpen;
+          build();
+        } else if (sameHand && endHit.xrUi) {
+          handleTap(endHit.xrUi);
+        } else if (
+          !useRayPick &&
+          sameHand &&
+          swipeCards === null &&
+          !endHit.xrUi
+        ) {
+          /** Pick layout fallito ma gesto corto dal centro → tap launcher (jitter / runtime). */
+          const slop = 280;
+          const ddx = cursorX - XR_PANEL.w / 2;
+          const ddy = cursorY - XR_PANEL.launcherSlot / 2;
+          if (ddx * ddx + ddy * ddy <= slop * slop) {
+            sheetOpen = !sheetOpen;
+            build();
+          }
+        }
+      } else if (sameHand && endHit.xrUi) {
+        if (!useRayPick || Math.abs(dx) < 0.03) {
+          handleTap(endHit.xrUi);
+        }
+      }
+    }
+
+    resetPinchGestureState();
+  };
+
+  const onSessionSelect = (ev: Event) => {
+    runPrimaryRelease(ev as XRInputSourceEvent);
+  };
+
+  const onSessionSelectEnd = (ev: Event) => {
+    runPrimaryRelease(ev as XRInputSourceEvent);
   };
 
   const attachHandlers = () => {
@@ -1528,8 +1561,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     if (!s) return false;
     hideDom();
     s.addEventListener("selectstart", onSelectStart);
-    s.addEventListener("selectend", onSelectEnd);
-    s.addEventListener("select", onSelectEnd as EventListener);
+    s.addEventListener("selectend", onSessionSelectEnd);
+    s.addEventListener("select", onSessionSelect);
     s.addEventListener("end", () => {
       showDom();
     });
@@ -1610,8 +1643,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     window.clearInterval(serviceQueueSimTimer);
     const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
     s?.removeEventListener("selectstart", onSelectStart);
-    s?.removeEventListener("selectend", onSelectEnd);
-    s?.removeEventListener("select", onSelectEnd as EventListener);
+    s?.removeEventListener("selectend", onSessionSelectEnd);
+    s?.removeEventListener("select", onSessionSelect);
     try {
       uiRoot.dispose();
     } catch {
