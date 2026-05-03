@@ -1047,14 +1047,34 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   let pinchDown = false;
   let pinchStartX = 0;
   let pinchStartUi: XrUi | null = null;
+  /** Mano che ha iniziato il pinch (per drag launcher + ray nel tick). */
+  let pinchRaySource: XRInputSource | null = null;
 
-  function hitTestFull(): { xrUi: XrUi | null; localX: number } {
+  /**
+   * Raycast sul pannello UIKit.
+   * IMPORTANT (Quest / WebXR): `XRFrame` è affidabile per `getPose` soprattutto dentro {@link XRInputSourceEvent}
+   * (`event.frame`). Usare `renderer.xr.getFrame()` negli handler `select*` fallisce spesso (frame fuori dal loop XR).
+   */
+  function hitTestFull(
+    frameOverride?: XRFrame | null,
+    inputSourceOverride?: XRInputSource | null,
+  ): { xrUi: XrUi | null; localX: number } {
     const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
     const refSpace = world.renderer?.xr?.getReferenceSpace?.();
-    const frame = world.renderer?.xr?.getFrame?.();
+    const frame =
+      frameOverride ??
+      (typeof world.renderer?.xr?.getFrame === "function" ? world.renderer.xr.getFrame() : null);
     if (!s || !refSpace || !frame) return { xrUi: null, localX: 0 };
-    const src = world.input.getPrimaryInputSource("right") ?? world.input.getPrimaryInputSource("left") ?? s.inputSources?.[0];
-    if (!src) return { xrUi: null, localX: 0 };
+
+    const src =
+      inputSourceOverride ??
+      (typeof world.input?.getPrimaryInputSource === "function"
+        ? world.input.getPrimaryInputSource("right") ?? world.input.getPrimaryInputSource("left")
+        : null) ??
+      s.inputSources?.[0] ??
+      null;
+    if (!src?.targetRaySpace) return { xrUi: null, localX: 0 };
+
     const pose = frame.getPose(src.targetRaySpace, refSpace);
     if (!pose) return { xrUi: null, localX: 0 };
 
@@ -1070,6 +1090,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     raycaster.ray.direction.copy(dir);
     raycaster.far = 12;
 
+    Object3D.prototype.updateMatrixWorld.call(uiRoot as Object3D, true);
     const hits = raycaster.intersectObject(uiRoot, true);
     if (!hits.length) return { xrUi: null, localX: 0 };
     const hit = hits[0]!;
@@ -1111,16 +1132,24 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     }
   }
 
-  const onSelectStart = () => {
+  const onSelectStart = (ev: Event) => {
+    const e = ev as XRInputSourceEvent;
     pinchDown = true;
-    const h = hitTestFull();
+    pinchRaySource = e.inputSource ?? null;
+    const h = hitTestFull(e.frame, e.inputSource);
     pinchStartX = h.localX;
     pinchStartUi = h.xrUi;
   };
 
-  const onSelectEnd = () => {
-    const endHit = hitTestFull();
+  const onSelectEnd = (ev: Event) => {
+    const e = ev as XRInputSourceEvent;
+    const endHit = hitTestFull(e.frame, e.inputSource);
     const dx = endHit.localX - pinchStartX;
+    const sameHand =
+      !pinchRaySource ||
+      !e.inputSource ||
+      pinchRaySource === e.inputSource ||
+      pinchRaySource.handedness === e.inputSource.handedness;
 
     if (pinchStartUi?.k === "launcher") {
       if (Math.abs(dx) > 0.1) {
@@ -1131,12 +1160,13 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         sheetOpen = !sheetOpen;
         build();
       }
-    } else if (Math.abs(dx) < 0.03 && endHit.xrUi) {
+    } else if (sameHand && Math.abs(dx) < 0.03 && endHit.xrUi) {
       handleTap(endHit.xrUi);
     }
 
     pinchDown = false;
     pinchStartUi = null;
+    pinchRaySource = null;
   };
 
   const attachHandlers = () => {
@@ -1166,8 +1196,9 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     const delta = prev ? t - prev : 16;
     prev = t;
     if (!followCam) uiRoot.lookAt(world.camera.getWorldPosition(tmpPos));
-    if (pinchDown && pinchStartUi?.k === "launcher") {
-      const { localX } = hitTestFull();
+    if (pinchDown && pinchStartUi?.k === "launcher" && pinchRaySource) {
+      const frame = typeof world.renderer?.xr?.getFrame === "function" ? world.renderer.xr.getFrame() : null;
+      const { localX } = hitTestFull(frame, pinchRaySource);
       const dx = localX - pinchStartX;
       if (Math.abs(dx) > 0.1) {
         const next = dx > 0 ? "badge" : "cards";
