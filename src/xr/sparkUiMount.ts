@@ -238,11 +238,16 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   const followCam = !flagParam("xrWorldUi");
 
   const rootEl = document.getElementById("root");
+  /** Non usare `display:none` su #root durante XR: su alcuni browser XR la composizione può “spianare” il quadro. */
   const hideDom = () => {
-    if (rootEl) rootEl.style.display = "none";
+    if (!rootEl) return;
+    rootEl.style.pointerEvents = "none";
+    rootEl.style.visibility = "hidden";
   };
   const showDom = () => {
-    if (rootEl) rootEl.style.display = "";
+    if (!rootEl) return;
+    rootEl.style.pointerEvents = "";
+    rootEl.style.visibility = "";
   };
 
   let launcherKind: XRKind = (() => {
@@ -723,46 +728,12 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
 
     sheetSlot.clear();
 
-    if (!sheetOpen) {
-      sheetSlot.add(
-        new Text({
-          text: "Tap the icon to open Rides / Badges",
-          fontSize: XR_PANEL.fsSmall,
-          fontWeight: "normal",
-          color: TEXT_ZINC_500,
-          textAlign: "center",
-        }),
-      );
-      return;
-    }
-
-    if (!profilo) {
-      sheetSlot.add(
-        new Text({
-          text: "Finish onboarding on your phone first — profile not found.",
-          fontSize: XR_PANEL.fsBody,
-          color: "rgba(251,113,133,0.95)",
-          textAlign: "center",
-        }),
-      );
-      return;
-    }
-
-    if (launcherKind === "cards") {
-      sheetSlot.add(mkPoiCategoryTabs());
-      sheetSlot.add(
-        new Container({
-          height: 10,
-          flexShrink: 0,
-        }),
-      );
-
-      const sorted = poiSortedForTab();
-      if (sorted.length === 0) {
+    try {
+      if (!sheetOpen) {
         sheetSlot.add(
           new Text({
-            text: "No items in this category.",
-            fontSize: XR_PANEL.fsBody,
+            text: "Tap the icon to open Rides / Badges",
+            fontSize: XR_PANEL.fsSmall,
             fontWeight: "normal",
             color: TEXT_ZINC_500,
             textAlign: "center",
@@ -770,81 +741,116 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         );
         return;
       }
-      for (const x of sorted) {
-        sheetSlot.add(mkPoiRow(x.p, x.m));
+
+      if (!profilo) {
+        sheetSlot.add(
+          new Text({
+            text: "Finish onboarding on your phone first — profile not found.",
+            fontSize: XR_PANEL.fsBody,
+            color: "rgba(251,113,133,0.95)",
+            textAlign: "center",
+          }),
+        );
+        return;
       }
-      return;
-    }
 
-    /* badges */
-    sheetSlot.add(mkBadgeSubTabs());
-    sheetSlot.add(new Container({ height: 8, flexShrink: 0 }));
+      if (launcherKind === "cards") {
+        sheetSlot.add(mkPoiCategoryTabs());
+        sheetSlot.add(
+          new Container({
+            height: 10,
+            flexShrink: 0,
+          }),
+        );
 
-    const rides = rawPois.filter((p) => p.categoria === "attrazione" && p.badge);
-    const sbloccati = (() => {
-      try {
-        const raw = localStorage.getItem("badgesSbloccati");
-        const arr = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(arr)) return 0;
-        return rides.filter((p) => arr.includes(p.id)).length;
-      } catch {
-        return 0;
+        const sorted = poiSortedForTab();
+        if (sorted.length === 0) {
+          sheetSlot.add(
+            new Text({
+              text: "No items in this category.",
+              fontSize: XR_PANEL.fsBody,
+              fontWeight: "normal",
+              color: TEXT_ZINC_500,
+              textAlign: "center",
+            }),
+          );
+          return;
+        }
+        for (const x of sorted) {
+          sheetSlot.add(mkPoiRow(x.p, x.m));
+        }
+        return;
       }
-    })();
 
-    if (badgeSub === "galleria") {
-      const grid = new Container({
-        width: XR_INNER_W,
-        flexDirection: "row",
-        flexWrap: "wrap",
-        justifyContent: "space-between",
-        gap: 10,
-      });
-      const cellW = (XR_INNER_W - 10) / 2;
-      for (const a of rides) {
-        let unlocked = false;
+      /* badges */
+      sheetSlot.add(mkBadgeSubTabs());
+      sheetSlot.add(new Container({ height: 8, flexShrink: 0 }));
+
+      const rides = rawPois.filter((p) => p.categoria === "attrazione" && p.badge);
+      const sbloccati = (() => {
         try {
           const raw = localStorage.getItem("badgesSbloccati");
           const arr = raw ? JSON.parse(raw) : [];
-          unlocked = Array.isArray(arr) && arr.includes(a.id);
+          if (!Array.isArray(arr)) return 0;
+          return rides.filter((p) => arr.includes(p.id)).length;
         } catch {
-          unlocked = false;
+          return 0;
         }
-        const cell = new Container({
-          width: cellW,
-          minHeight: 120,
-          borderRadius: 16,
-          padding: 10,
-          backgroundColor: "rgba(9,9,11,0.6)",
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.1)",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 8,
+      })();
+
+      if (badgeSub === "galleria") {
+        const grid = new Container({
+          width: XR_INNER_W,
+          flexDirection: "row",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+          gap: 10,
         });
-        const stickerImg = new UiImage({
-          src: stickerForRideId(a.id),
-          width: XR_PANEL.stickerImg,
-          height: XR_PANEL.stickerImg,
-          opacity: unlocked ? 0.9 : 0.35,
-          depthTest: false,
-          depthWrite: false,
-        });
-        driftNodes.push({ node: stickerImg, phase: Math.random() * 3800 });
-        cell.add(stickerImg);
-        cell.add(
-          new Text({
-            text: a.nome,
-            fontSize: XR_PANEL.fsSmall,
-            color: "rgba(244,244,245,0.95)",
-            textAlign: "center",
-            maxWidth: cellW - 8,
-            wordBreak: "break-word",
-          }),
-        );
-        grid.add(cell);
-      }
-      sheetSlot.add(grid);
+        const cellW = (XR_INNER_W - 10) / 2;
+        for (const a of rides) {
+          let unlocked = false;
+          try {
+            const raw = localStorage.getItem("badgesSbloccati");
+            const arr = raw ? JSON.parse(raw) : [];
+            unlocked = Array.isArray(arr) && arr.includes(a.id);
+          } catch {
+            unlocked = false;
+          }
+          const cell = new Container({
+            width: cellW,
+            minHeight: 120,
+            borderRadius: 16,
+            padding: 10,
+            backgroundColor: "rgba(9,9,11,0.6)",
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.1)",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8,
+          });
+          const stickerImg = new UiImage({
+            src: stickerForRideId(a.id),
+            width: XR_PANEL.stickerImg,
+            height: XR_PANEL.stickerImg,
+            opacity: unlocked ? 0.9 : 0.35,
+            depthTest: false,
+            depthWrite: false,
+          });
+          driftNodes.push({ node: stickerImg, phase: Math.random() * 3800 });
+          cell.add(stickerImg);
+          cell.add(
+            new Text({
+              text: a.nome,
+              fontSize: XR_PANEL.fsSmall,
+              color: "rgba(244,244,245,0.95)",
+              textAlign: "center",
+              maxWidth: cellW - 8,
+              wordBreak: "break-word",
+            }),
+          );
+          grid.add(cell);
+        }
+        sheetSlot.add(grid);
         sheetSlot.add(
           new Text({
             text: `${sbloccati}/${rides.length} badges unlocked`,
@@ -854,48 +860,57 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
             textAlign: "center",
           }),
         );
-      return;
-    }
+        return;
+      }
 
-    /* scan */
-    const wrap = new Container({
-      width: XR_INNER_W,
-      minHeight: 280,
-      borderRadius: 24,
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.1)",
-      backgroundColor: "rgba(0,0,0,0)",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 14,
-      padding: 16,
-    });
-    if (!scanNotice) {
-      const start = new Container({
-        paddingLeft: 22,
-        paddingRight: 22,
-        paddingTop: 12,
-        paddingBottom: 12,
-        borderRadius: 999,
-        backgroundColor: "rgba(24,24,27,0.82)",
+      /* scan */
+      const wrap = new Container({
+        width: XR_INNER_W,
+        minHeight: 280,
+        borderRadius: 24,
         borderWidth: 1,
         borderColor: "rgba(255,255,255,0.1)",
+        backgroundColor: "rgba(0,0,0,0)",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 14,
+        padding: 16,
       });
-      (start as unknown as Object3D).userData = { xrUi: { k: "scanStart" } satisfies XrUi };
-      start.add(new Text({ text: "Start scanning", fontSize: XR_PANEL.fsBody, color: "white" }));
-      wrap.add(start);
-    } else {
-      wrap.add(
-        new Text({
-          text: "Camera scanning runs in flat mode.\nExit AR, then use Scan on your phone.",
-          fontSize: XR_PANEL.fsBody,
-          color: "rgba(228,228,231,0.95)",
-          textAlign: "center",
-        }),
-      );
+      if (!scanNotice) {
+        const start = new Container({
+          paddingLeft: 22,
+          paddingRight: 22,
+          paddingTop: 12,
+          paddingBottom: 12,
+          borderRadius: 999,
+          backgroundColor: "rgba(24,24,27,0.82)",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.1)",
+        });
+        (start as unknown as Object3D).userData = { xrUi: { k: "scanStart" } satisfies XrUi };
+        start.add(new Text({ text: "Start scanning", fontSize: XR_PANEL.fsBody, color: "white" }));
+        wrap.add(start);
+      } else {
+        wrap.add(
+          new Text({
+            text: "Camera scanning runs in flat mode.\nExit AR, then use Scan on your phone.",
+            fontSize: XR_PANEL.fsBody,
+            color: "rgba(228,228,231,0.95)",
+            textAlign: "center",
+          }),
+        );
+      }
+      sheetSlot.add(wrap);
+    } finally {
+      if (sheetOpen) {
+        try {
+          sheetSlot.scrollPosition.value = [0, 0];
+        } catch {
+          // ignore
+        }
+      }
     }
-    sheetSlot.add(wrap);
   }
 
   function applySeasonParcoIfStale() {
