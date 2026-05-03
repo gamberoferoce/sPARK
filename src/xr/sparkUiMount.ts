@@ -1,7 +1,21 @@
 import { Container, Image as UiImage, Text } from "@pmndrs/uikit";
 import type { Component as UiComponent } from "@pmndrs/uikit";
 import type { World } from "@iwsdk/core";
-import { DoubleSide, Euler, Mesh, MeshBasicMaterial, Object3D, Quaternion, Raycaster, SphereGeometry, Vector3 } from "three";
+import {
+  BufferAttribute,
+  BufferGeometry,
+  DoubleSide,
+  Euler,
+  Line,
+  LineBasicMaterial,
+  Mesh,
+  MeshBasicMaterial,
+  Object3D,
+  Quaternion,
+  Raycaster,
+  SphereGeometry,
+  Vector3,
+} from "three";
 
 import type { ProfiloUtente } from "@/components/Onboarding";
 import { calcolaDistanza } from "@/core/algorithm.js";
@@ -1043,6 +1057,44 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   const tmpQuat = new Quaternion();
   const origin = new Vector3();
   const dir = new Vector3();
+  /** Ray visivo (hover): separati da hitTest per non sporcare lo stato del raycast logico. */
+  const visOrigin = new Vector3();
+  const visDir = new Vector3();
+  const visRayLen = 4;
+
+  const xrHideRay = flagParam("xrHideRay");
+  const rayRoot = world.getPersistentRoot();
+  const rayGeom = new BufferGeometry();
+  const rayPos = new Float32Array(6);
+  rayGeom.setAttribute("position", new BufferAttribute(rayPos, 3));
+  const rayLineMat = new LineBasicMaterial({
+    color: 0x7dd3fc,
+    depthTest: false,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0.92,
+  });
+  const rayLine = new Line(rayGeom, rayLineMat);
+  rayLine.frustumCulled = false;
+  rayLine.renderOrder = 2000;
+  rayLine.visible = false;
+  const hitDot = new Mesh(
+    new SphereGeometry(0.014, 14, 14),
+    new MeshBasicMaterial({
+      color: 0x4ade80,
+      depthTest: false,
+      depthWrite: false,
+      transparent: true,
+      opacity: 0.95,
+    }),
+  );
+  hitDot.frustumCulled = false;
+  hitDot.renderOrder = 2001;
+  hitDot.visible = false;
+  if (!xrHideRay) {
+    rayRoot.add(rayLine);
+    rayRoot.add(hitDot);
+  }
 
   let pinchDown = false;
   let pinchStartX = 0;
@@ -1098,6 +1150,73 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     const localPoint = uiRoot.worldToLocal(hit.point.clone());
     const localX_m = localPoint.x * uiRoot.scale.x;
     return { xrUi, localX: localX_m };
+  }
+
+  /** Linea + punto sul pannello: aggiornato ogni frame nel loop XR (serve “hover” visivo su Quest). */
+  function updateXrPointerRayVisual() {
+    if (xrHideRay) return;
+    const frame = typeof world.renderer?.xr?.getFrame === "function" ? world.renderer.xr.getFrame() : null;
+    const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
+    const refSpace = world.renderer?.xr?.getReferenceSpace?.();
+    if (!frame || !s || !refSpace) {
+      rayLine.visible = false;
+      hitDot.visible = false;
+      return;
+    }
+
+    const src =
+      (pinchDown && pinchRaySource) ||
+      (typeof world.input?.getPrimaryInputSource === "function"
+        ? world.input.getPrimaryInputSource("right") ?? world.input.getPrimaryInputSource("left")
+        : null) ??
+      Array.from(s.inputSources ?? []).find((i: XRInputSource) => i.targetRaySpace) ??
+      null;
+    if (!src?.targetRaySpace) {
+      rayLine.visible = false;
+      hitDot.visible = false;
+      return;
+    }
+
+    const pose = frame.getPose(src.targetRaySpace, refSpace);
+    if (!pose) {
+      rayLine.visible = false;
+      hitDot.visible = false;
+      return;
+    }
+
+    visOrigin.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
+    tmpQuat.set(
+      pose.transform.orientation.x,
+      pose.transform.orientation.y,
+      pose.transform.orientation.z,
+      pose.transform.orientation.w,
+    );
+    visDir.set(0, 0, -1).applyQuaternion(tmpQuat).normalize();
+
+    rayPos[0] = visOrigin.x;
+    rayPos[1] = visOrigin.y;
+    rayPos[2] = visOrigin.z;
+    rayPos[3] = visOrigin.x + visDir.x * visRayLen;
+    rayPos[4] = visOrigin.y + visDir.y * visRayLen;
+    rayPos[5] = visOrigin.z + visDir.z * visRayLen;
+    const posAttr = rayGeom.attributes.position as BufferAttribute;
+    posAttr.needsUpdate = true;
+    rayGeom.computeBoundingSphere();
+    rayLine.visible = true;
+
+    raycaster.ray.origin.copy(visOrigin);
+    raycaster.ray.direction.copy(visDir);
+    raycaster.far = 12;
+    Object3D.prototype.updateMatrixWorld.call(uiRoot as Object3D, true);
+    const visHits = raycaster.intersectObject(uiRoot, true);
+    if (visHits.length > 0) {
+      rayLineMat.color.setHex(0x4ade80);
+      hitDot.visible = true;
+      hitDot.position.copy(visHits[0]!.point);
+    } else {
+      rayLineMat.color.setHex(0x7dd3fc);
+      hitDot.visible = false;
+    }
   }
 
   function handleTap(u: XrUi) {
@@ -1214,6 +1333,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       applyUiDriftFloat(d.node, driftT, d.phase, reducedMotion);
     }
     uiRoot.update(delta);
+    updateXrPointerRayVisual();
 
     frames++;
     if (frames % 15 === 0) {
@@ -1247,6 +1367,18 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       // ignore
     }
     uiRoot.removeFromParent();
+    if (!xrHideRay) {
+      try {
+        rayRoot.remove(rayLine);
+        rayRoot.remove(hitDot);
+        rayGeom.dispose();
+        rayLineMat.dispose();
+        hitDot.geometry.dispose();
+        (hitDot.material as MeshBasicMaterial).dispose?.();
+      } catch {
+        // ignore
+      }
+    }
     for (const m of dbgMeshes) {
       try {
         m.geometry.dispose();
