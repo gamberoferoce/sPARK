@@ -1126,7 +1126,110 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   let pinchStartCursorX = cursorX;
   const lastHandWorld = new Vector3();
   const panelWorldScratch = new Vector3();
-  const camToPanelScratch = new Vector3();
+
+  /** Pixel orizzontale → metro lungo asse X locale del pannello (come il vecchio hit da mesh). */
+  function layoutLocalXFromPx(px: number): number {
+    return (px - XR_PANEL.w / 2) * XR_PIXEL_SIZE * uiRoot.scale.x;
+  }
+
+  /** Hit test 2D sul foglio “cards” (coord. contenuto scrollabile, origine alto-sinistra dello sheet). */
+  function pickCardsSheetContent(cx: number, cy: number): XrUi | null {
+    const GAP = 10;
+    const TAB_H = 44;
+    const TAB_GAP = 8;
+    const inner = XR_INNER_W;
+    const tw = (inner - 2 * TAB_GAP) / 3;
+    const cats: PoiCat[] = ["attrazione", "ristoro", "servizi"];
+
+    let y = 0;
+    if (cy >= y && cy < y + TAB_H) {
+      let x = 0;
+      for (let i = 0; i < 3; i++) {
+        if (cx >= x && cx < x + tw) return { k: "poiCat", cat: cats[i]! };
+        x += tw + TAB_GAP;
+      }
+      return null;
+    }
+    y += TAB_H + GAP;
+    if (cy >= y && cy < y + 10) return null;
+    y += 10 + GAP;
+
+    const sorted = poiSortedForTab();
+    const ROW_H = 80;
+    const rowLeft = (inner - XR_ROW_W) / 2;
+
+    for (let idx = 0; idx < sorted.length; idx++) {
+      if (cy >= y && cy < y + ROW_H) {
+        const p = sorted[idx]!.p;
+        const rx = cx - rowLeft;
+        if (rx < 0 || rx > XR_ROW_W) return null;
+        const navLeft = XR_ROW_W - 36;
+        const bellLeft = XR_ROW_W - 36 - 8 - 36;
+        if (rx >= navLeft && rx <= XR_ROW_W) return { k: "nav", id: p.id };
+        if (rx >= bellLeft && rx < navLeft) return { k: "bell", id: p.id };
+        return null;
+      }
+      y += ROW_H + GAP;
+    }
+    return null;
+  }
+
+  /** Hit test 2D sul foglio “badges”. */
+  function pickBadgesSheetContent(cx: number, cy: number): XrUi | null {
+    const GAP = 10;
+    const inner = XR_INNER_W;
+    let y = 0;
+    const TAB_H = 44;
+    if (cy >= y && cy < y + TAB_H) {
+      const totalW = 120 + 10 + 120;
+      const startX = (inner - totalW) / 2;
+      if (cx >= startX && cx < startX + 120) return { k: "badgeSub", sub: "galleria" };
+      if (cx >= startX + 130 && cx < startX + 250) return { k: "badgeSub", sub: "scansiona" };
+      return null;
+    }
+    y += TAB_H + GAP;
+    if (cy >= y && cy < y + 8) return null;
+    y += 8 + GAP;
+
+    if (badgeSub === "galleria") return null;
+
+    if (!scanNotice) {
+      const btnW = 240;
+      const btnH = 52;
+      const btnLeft = (inner - btnW) / 2;
+      const btnTop = y + 72;
+      if (cx >= btnLeft && cx < btnLeft + btnW && cy >= btnTop && cy < btnTop + btnH) {
+        return { k: "scanStart" };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Punto indicato dal cursore (pinch): **solo** layout 2D + scroll, **nessun** {@link Raycaster}.
+   * Coord. panel: (0,0) alto-sinistra del root {@link uiRoot}, come {@link cursorX}/{@link cursorY}.
+   */
+  function pickLayout2D(px: number, py: number): XrUi | null {
+    const padLeft = (XR_PANEL.w - XR_INNER_W) / 2;
+    const sheetTop = XR_PANEL.launcherSlot + XR_PANEL.gapLauncherSheet;
+    const bs = 40;
+    const lx = (XR_PANEL.w - bs) / 2;
+    const ly = (XR_PANEL.launcherSlot - bs) / 2;
+    if (px >= lx && px <= lx + bs && py >= ly && py <= ly + bs) {
+      return { k: "launcher" };
+    }
+
+    if (!sheetOpen || !profilo) return null;
+    if (py < sheetTop || py > sheetTop + XR_CONTENT_H) return null;
+    if (px < padLeft || px > padLeft + XR_INNER_W) return null;
+
+    const scrollY = sheetSlot.scrollPosition.value?.[1] ?? 0;
+    const cx = px - padLeft;
+    const cy = py - sheetTop + scrollY;
+
+    if (launcherKind === "cards") return pickCardsSheetContent(cx, cy);
+    return pickBadgesSheetContent(cx, cy);
+  }
 
   /**
    * Raycast dal controller (target ray).
@@ -1187,33 +1290,17 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     return target;
   }
 
-  /** Pick da “cursore” 2D: raggio dalla camera attraverso il punto sul pannello (click / hover pinch). */
-  function hitTestCursorPickDetail(): {
+  /** Pick pinch: layout 2D + scroll, niente raycast Three.js. */
+  function hitTestLayoutPickDetail(): {
     xrUi: XrUi | null;
     localX: number;
     hitPoint: Vector3 | null;
   } {
-    const cam = world.camera;
+    const xrUi = pickLayout2D(cursorX, cursorY);
+    const localX = layoutLocalXFromPx(cursorX);
     panelPixelToWorld(cursorX, cursorY, panelWorldScratch);
-    camToPanelScratch.copy(panelWorldScratch).sub(cam.position);
-    if (camToPanelScratch.lengthSq() < 1e-8) return { xrUi: null, localX: 0, hitPoint: null };
-    raycaster.ray.origin.copy(cam.position);
-    raycaster.ray.direction.copy(camToPanelScratch.normalize());
-    raycaster.far = 8;
-
-    Object3D.prototype.updateMatrixWorld.call(uiRoot as Object3D, true);
-    const hits = raycaster.intersectObject(uiRoot, true);
-    if (!hits.length) return { xrUi: null, localX: 0, hitPoint: null };
-    const hit = hits[0]!;
-    const xrUi = readXrUi(hit.object);
-    const localPoint = uiRoot.worldToLocal(hit.point.clone());
-    const localX_m = localPoint.x * uiRoot.scale.x;
-    return { xrUi, localX: localX_m, hitPoint: hit.point.clone() };
-  }
-
-  function hitTestCursorPick(): { xrUi: XrUi | null; localX: number } {
-    const d = hitTestCursorPickDetail();
-    return { xrUi: d.xrUi, localX: d.localX };
+    const hitPoint = xrUi ? panelWorldScratch.clone() : null;
+    return { xrUi, localX, hitPoint };
   }
 
   function hitTestFull(
@@ -1221,7 +1308,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     inputSourceOverride?: XRInputSource | null,
   ): { xrUi: XrUi | null; localX: number } {
     if (useRayPick) return hitTestRay(frameOverride, inputSourceOverride);
-    return hitTestCursorPick();
+    const d = hitTestLayoutPickDetail();
+    return { xrUi: d.xrUi, localX: d.localX };
   }
 
   function advanceCursorFromHandDelta(frame: XRFrame) {
@@ -1251,7 +1339,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         cursorReticle.visible = false;
         return;
       }
-      const det = hitTestCursorPickDetail();
+      const det = hitTestLayoutPickDetail();
       panelPixelToWorld(cursorX, cursorY, panelWorldScratch);
       cursorReticle.position.copy(panelWorldScratch);
       cursorReticle.visible = true;
@@ -1369,22 +1457,27 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     pinchDown = true;
     pinchRaySource = e.inputSource ?? null;
     const refSpace = world.renderer?.xr?.getReferenceSpace?.();
-    if (!useRayPick && refSpace && e.inputSource?.targetRaySpace) {
+    if (!useRayPick) {
       cursorX = XR_PANEL.w / 2;
       cursorY = XR_PANEL.launcherSlot / 2;
       pinchStartCursorX = cursorX;
-      const pose = e.frame.getPose(e.inputSource.targetRaySpace, refSpace);
-      if (pose) {
-        lastHandWorld.set(
-          pose.transform.position.x,
-          pose.transform.position.y,
-          pose.transform.position.z,
-        );
+      if (refSpace && e.inputSource?.targetRaySpace) {
+        const pose = e.frame.getPose(e.inputSource.targetRaySpace, refSpace);
+        if (pose) {
+          lastHandWorld.set(
+            pose.transform.position.x,
+            pose.transform.position.y,
+            pose.transform.position.z,
+          );
+        }
       }
+      pinchStartUi = { k: "launcher" };
+      pinchStartX = layoutLocalXFromPx(cursorX);
+    } else {
+      const h = hitTestFull(e.frame, e.inputSource);
+      pinchStartX = h.localX;
+      pinchStartUi = h.xrUi;
     }
-    const h = hitTestFull(e.frame, e.inputSource);
-    pinchStartX = h.localX;
-    pinchStartUi = h.xrUi;
   };
 
   const onSelectEnd = (ev: Event) => {
