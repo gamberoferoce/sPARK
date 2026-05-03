@@ -1523,20 +1523,13 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
           build();
         } else if (sameHand && endHit.xrUi) {
           handleTap(endHit.xrUi);
-        } else if (
-          !useRayPick &&
-          sameHand &&
-          swipeCards === null &&
-          !endHit.xrUi
-        ) {
-          /** Pick layout fallito ma gesto corto dal centro → tap launcher (jitter / runtime). */
-          const slop = 280;
-          const ddx = cursorX - XR_PANEL.w / 2;
-          const ddy = cursorY - XR_PANEL.launcherSlot / 2;
-          if (ddx * ddx + ddy * ddy <= slop * slop) {
-            sheetOpen = !sheetOpen;
-            build();
-          }
+        } else if (!useRayPick && sameHand && swipeCards === null) {
+          /**
+           * Zero-ray: non deve esistere il caso “rilascio e non succede nulla”.
+           * Se non abbiamo un target valido al rilascio, interpretiamo come tap sul launcher.
+           */
+          sheetOpen = !sheetOpen;
+          build();
         }
       } else if (sameHand && endHit.xrUi) {
         if (!useRayPick || Math.abs(dx) < 0.03) {
