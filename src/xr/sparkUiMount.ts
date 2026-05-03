@@ -1,4 +1,5 @@
 import { Container, Image as UiImage, Text } from "@pmndrs/uikit";
+import type { Component as UiComponent } from "@pmndrs/uikit";
 import type { World } from "@iwsdk/core";
 import { DoubleSide, Euler, Mesh, MeshBasicMaterial, Object3D, Quaternion, Raycaster, SphereGeometry, Vector3 } from "three";
 
@@ -10,6 +11,26 @@ import { applySimulatedServiceQueues, SERVICE_QUEUE_FREEZE_ATTR_CLOSED_RATIO } f
 import type { Poi } from "@/types/poi";
 
 import {
+  bodyTrackingEm,
+  CARD_BG,
+  CIRCLE_BG,
+  CLOSED_BADGE_BG,
+  CLOSED_BADGE_FG,
+  CLOSED_BADGE_RING,
+  ICON_RING,
+  LAUNCHER_BG,
+  LAUNCHER_BORDER,
+  LINE,
+  TAB_ACTIVE_BG,
+  TAB_ACTIVE_RING,
+  TAB_TEXT_ACTIVE,
+  TAB_TEXT_INACTIVE,
+  TEXT_ZINC_500,
+  TEXT_ZINC_600,
+  trackingWideEm,
+  waitBadgeColors,
+} from "./flatUiTokens";
+import {
   XR_CONTENT_H,
   XR_INNER_W,
   XR_PANEL,
@@ -17,15 +38,8 @@ import {
   XR_ROW_W,
   XR_UI_SCALE_DEFAULT,
 } from "./sparkPanelDesign";
+import { applyUiDriftFloat } from "./xrUiDrift";
 import { applyXrUiRenderingBoost } from "./xrRendererQuality";
-
-/** Più contrasto / opacità del desktop su passthrough (sfondo reale “schiarisce” UI trasparenti). */
-const CARD_BG = "rgba(8,8,10,0.78)";
-const LINE = "rgba(255,255,255,0.28)";
-const CIRCLE_BG = "rgba(12,12,14,0.88)";
-const LAUNCHER_BG = "rgba(18,18,22,0.92)";
-const TAB_ACTIVE_BG = "rgba(100,100,110,0.65)";
-const TAB_ACTIVE_RING = "rgba(255,255,255,0.22)";
 
 const STICKERS = [
   "/stickers/sticker-1.png",
@@ -91,28 +105,6 @@ function isParcoOpenNow(now = new Date()) {
   const closeMin = parseHm(PARCO.orario_chiusura_default) ?? 24 * 60;
   const nowMin = now.getHours() * 60 + now.getMinutes();
   return nowMin >= openMin && nowMin < closeMin;
-}
-
-function waitBadgeColors(minuti: number) {
-  if (minuti < 15) {
-    return {
-      bg: "rgba(6,78,59,0.72)",
-      fg: "rgba(167,243,208,1)",
-      ring: "rgba(16,185,129,0.28)",
-    };
-  }
-  if (minuti <= 45) {
-    return {
-      bg: "rgba(69,26,3,0.55)",
-      fg: "rgba(253,230,138,1)",
-      ring: "rgba(245,158,11,0.28)",
-    };
-  }
-  return {
-    bg: "rgba(69,10,10,0.85)",
-    fg: "rgba(254,205,211,1)",
-    ring: "rgba(190,18,60,0.38)",
-  };
 }
 
 function loadProfilo(): ProfiloUtente | null {
@@ -260,6 +252,10 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   let lastQueueTimesOk = 0;
   let rawPois: Poi[] = [];
 
+  const reducedMotion =
+    typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const driftNodes: Array<{ node: UiComponent; phase: number }> = [];
+
   const hudEl = document.getElementById("xr-html-debug") ?? createHudEl();
 
   function createHudEl() {
@@ -289,7 +285,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     depthWrite: false,
     renderOrder: 1000,
     fontFamily: "Nunito",
-    fontWeight: "medium",
+    fontWeight: "normal",
   });
 
   uiRoot.scale.setScalar(Number.isFinite(dbgUiScale) ? dbgUiScale : XR_UI_SCALE_DEFAULT);
@@ -360,7 +356,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       borderRadius: 999,
       backgroundColor: LAUNCHER_BG,
       borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.95)",
+      borderColor: LAUNCHER_BORDER,
       alignItems: "center",
       justifyContent: "center",
     });
@@ -416,7 +412,9 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         new Text({
           text: t.label,
           fontSize: XR_PANEL.fsTab,
-          color: on ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.92)",
+          fontWeight: "normal",
+          letterSpacing: trackingWideEm(XR_PANEL.fsTab),
+          color: on ? TAB_TEXT_ACTIVE : TAB_TEXT_INACTIVE,
           textAlign: "center",
         }),
       );
@@ -458,7 +456,9 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         new Text({
           text: t.label,
           fontSize: XR_PANEL.fsTab,
-          color: "white",
+          fontWeight: "normal",
+          letterSpacing: trackingWideEm(XR_PANEL.fsTab),
+          color: on ? TAB_TEXT_ACTIVE : TAB_TEXT_INACTIVE,
         }),
       );
       row.add(cell);
@@ -488,7 +488,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       borderWidth: 1,
       borderColor: LINE,
       paddingLeft: 14,
-      paddingRight: 14,
+      paddingRight: 40,
       paddingTop: 10,
       paddingBottom: 10,
       flexDirection: "row",
@@ -507,13 +507,13 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     });
 
     const iconWrap = new Container({
-      width: 44,
-      height: 44,
+      width: 40,
+      height: 40,
       flexShrink: 0,
       borderRadius: 999,
       backgroundColor: CIRCLE_BG,
       borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.7)",
+      borderColor: ICON_RING,
       alignItems: "center",
       justifyContent: "center",
     });
@@ -531,8 +531,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     iconWrap.add(
       new UiImage({
         src: iconSrc,
-        width: p.categoria === "attrazione" ? 28 : 26,
-        height: p.categoria === "attrazione" ? 28 : 26,
+        width: p.categoria === "attrazione" ? 26 : 24,
+        height: p.categoria === "attrazione" ? 26 : 24,
         opacity: 0.95,
         color: "white",
         depthTest: false,
@@ -552,6 +552,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       new Text({
         text: p.nome,
         fontSize: XR_PANEL.fsBody,
+        fontWeight: "normal",
+        letterSpacing: bodyTrackingEm(XR_PANEL.fsBody),
         color: "white",
         maxWidth: XR_ROW_W - 200,
         wordBreak: "break-word",
@@ -573,7 +575,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       new Text({
         text: formatDistanza(m),
         fontSize: XR_PANEL.fsDistance,
-        color: "rgba(161,161,170,1)",
+        fontWeight: "normal",
+        color: TEXT_ZINC_500,
       }),
     );
     textCol.add(distRow);
@@ -589,11 +592,18 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         paddingTop: 4,
         paddingBottom: 4,
         borderRadius: 999,
-        backgroundColor: "rgba(39,39,42,0.72)",
+        backgroundColor: CLOSED_BADGE_BG,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.1)",
+        borderColor: CLOSED_BADGE_RING,
       });
-      badge.add(new Text({ text: "Closed", fontSize: XR_PANEL.fsSmall, color: "rgba(228,228,231,0.95)" }));
+      badge.add(
+        new Text({
+          text: "Closed",
+          fontSize: XR_PANEL.fsSmall,
+          fontWeight: "normal",
+          color: CLOSED_BADGE_FG,
+        }),
+      );
       right.add(badge);
     } else if (showWait) {
       const cols = waitBadgeColors(coda);
@@ -611,12 +621,14 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         new Text({
           text: `${Math.round(coda)} min`,
           fontSize: XR_PANEL.fsSmall,
+          fontWeight: "normal",
+          letterSpacing: trackingWideEm(XR_PANEL.fsSmall),
           color: cols.fg,
         }),
       );
       right.add(badge);
     } else {
-      right.add(new Text({ text: "—", fontSize: XR_PANEL.fsSmall, color: "rgba(82,82,91,1)" }));
+      right.add(new Text({ text: "—", fontSize: XR_PANEL.fsSmall, color: TEXT_ZINC_600 }));
     }
 
     const actions = new Container({
@@ -632,7 +644,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       borderRadius: 999,
       borderWidth: 1,
       borderColor: "white",
-      backgroundColor: bellOn ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.25)",
+      backgroundColor: bellOn ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0)",
       alignItems: "center",
       justifyContent: "center",
     });
@@ -642,6 +654,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         text: "🔔",
         fontSize: 16,
         color: "white",
+        opacity: bellOn ? 1 : 0.7,
       }),
     );
 
@@ -651,7 +664,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       borderRadius: 999,
       borderWidth: 1,
       borderColor: "white",
-      backgroundColor: "rgba(0,0,0,0.25)",
+      backgroundColor: "rgba(0,0,0,0)",
       alignItems: "center",
       justifyContent: "center",
     });
@@ -681,6 +694,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   }
 
   function build() {
+    driftNodes.length = 0;
     profilo = loadProfilo();
     bellById = loadBellMap();
     userPos = loadLastPos();
@@ -700,7 +714,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         new Text({
           text: "Tap the icon to open Rides / Badges",
           fontSize: XR_PANEL.fsSmall,
-          color: "rgba(161,161,170,0.95)",
+          fontWeight: "normal",
+          color: TEXT_ZINC_500,
           textAlign: "center",
         }),
       );
@@ -734,7 +749,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
           new Text({
             text: "No items in this category.",
             fontSize: XR_PANEL.fsBody,
-            color: "rgba(161,161,170,1)",
+            fontWeight: "normal",
+            color: TEXT_ZINC_500,
             textAlign: "center",
           }),
         );
@@ -785,23 +801,23 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
           minHeight: 120,
           borderRadius: 16,
           padding: 10,
-          backgroundColor: "rgba(0,0,0,0)",
+          backgroundColor: "rgba(9,9,11,0.6)",
           borderWidth: 1,
           borderColor: "rgba(255,255,255,0.1)",
           flexDirection: "column",
           alignItems: "center",
           gap: 8,
         });
-        cell.add(
-          new UiImage({
-            src: stickerForRideId(a.id),
-            width: XR_PANEL.stickerImg,
-            height: XR_PANEL.stickerImg,
-            opacity: unlocked ? 0.9 : 0.35,
-            depthTest: false,
-            depthWrite: false,
-          }),
-        );
+        const stickerImg = new UiImage({
+          src: stickerForRideId(a.id),
+          width: XR_PANEL.stickerImg,
+          height: XR_PANEL.stickerImg,
+          opacity: unlocked ? 0.9 : 0.35,
+          depthTest: false,
+          depthWrite: false,
+        });
+        driftNodes.push({ node: stickerImg, phase: Math.random() * 3800 });
+        cell.add(stickerImg);
         cell.add(
           new Text({
             text: a.nome,
@@ -815,14 +831,15 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
         grid.add(cell);
       }
       sheetSlot.add(grid);
-      sheetSlot.add(
-        new Text({
-          text: `${sbloccati}/${rides.length} badges unlocked`,
-          fontSize: XR_PANEL.fsSmall,
-          color: "rgba(161,161,170,1)",
-          textAlign: "center",
-        }),
-      );
+        sheetSlot.add(
+          new Text({
+            text: `${sbloccati}/${rides.length} badges unlocked`,
+            fontSize: XR_PANEL.fsSmall,
+            fontWeight: "normal",
+            color: TEXT_ZINC_500,
+            textAlign: "center",
+          }),
+        );
       return;
     }
 
@@ -1160,6 +1177,10 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
           build();
         }
       }
+    }
+    const driftT = performance.now();
+    for (const d of driftNodes) {
+      applyUiDriftFloat(d.node, driftT, d.phase, reducedMotion);
     }
     uiRoot.update(delta);
 
