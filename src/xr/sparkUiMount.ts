@@ -210,6 +210,13 @@ function parseFloatParam(name: string, fallback: number) {
 
 export type MountSparkUiOpts = {
   xrDomOverlayFallbackHint?: string | null;
+  /**
+   * Ritarda `display:none` su `#root` dopo l’attach alla sessione XR.
+   * Sul fallback UIKit (senza DOM overlay) nascondere il DOM subito lascia solo passthrough + mesh:
+   * se il primo frame del pannello non è ancora “presente”, sembra schermo vuoto.
+   * Default: ~650ms quando `xrDomOverlayFallbackHint` è valorizzato, altrimenti 0.
+   */
+  deferHideDomMs?: number;
 };
 
 export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): () => void {
@@ -229,6 +236,26 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   };
   const showDom = () => {
     if (rootEl) rootEl.style.display = "";
+  };
+
+  const deferHideDomResolved =
+    opts.deferHideDomMs ??
+    (opts.xrDomOverlayFallbackHint != null && opts.xrDomOverlayFallbackHint !== "" ? 650 : 0);
+  let hideDomTimer = 0;
+
+  const scheduleHideDom = () => {
+    if (hideDomTimer) {
+      window.clearTimeout(hideDomTimer);
+      hideDomTimer = 0;
+    }
+    if (deferHideDomResolved > 0) {
+      hideDomTimer = window.setTimeout(() => {
+        hideDomTimer = 0;
+        hideDom();
+      }, deferHideDomResolved);
+    } else {
+      hideDom();
+    }
   };
 
   let launcherKind: XRKind = (() => {
@@ -1142,11 +1169,15 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   const attachHandlers = () => {
     const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
     if (!s) return false;
-    hideDom();
+    scheduleHideDom();
     s.addEventListener("selectstart", onSelectStart);
     s.addEventListener("selectend", onSelectEnd);
     s.addEventListener("select", onSelectEnd as EventListener);
     s.addEventListener("end", () => {
+      if (hideDomTimer) {
+        window.clearTimeout(hideDomTimer);
+        hideDomTimer = 0;
+      }
       showDom();
     });
     return true;
@@ -1201,6 +1232,10 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   raf = requestAnimationFrame(tick);
 
   return () => {
+    if (hideDomTimer) {
+      window.clearTimeout(hideDomTimer);
+      hideDomTimer = 0;
+    }
     cancelAnimationFrame(raf);
     window.clearInterval(handlersTimer);
     window.clearInterval(seasonParcoTimer);
