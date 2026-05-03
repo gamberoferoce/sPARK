@@ -1091,9 +1091,23 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   hitDot.frustumCulled = false;
   hitDot.renderOrder = 2001;
   hitDot.visible = false;
+  const cursorReticle = new Mesh(
+    new SphereGeometry(0.012, 12, 12),
+    new MeshBasicMaterial({
+      color: 0xffaa44,
+      depthTest: false,
+      depthWrite: false,
+      transparent: true,
+      opacity: 0.92,
+    }),
+  );
+  cursorReticle.frustumCulled = false;
+  cursorReticle.renderOrder = 1999;
+  cursorReticle.visible = false;
+  rayRoot.add(hitDot);
+  rayRoot.add(cursorReticle);
   if (!xrHideRay) {
     rayRoot.add(rayLine);
-    rayRoot.add(hitDot);
   }
 
   let pinchDown = false;
@@ -1102,12 +1116,23 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
   /** Mano che ha iniziato il pinch (per drag launcher + ray nel tick). */
   let pinchRaySource: XRInputSource | null = null;
 
+  /** `false` = cursore 2D sul pannello mosso dal pinch (default). `true` = ray dal controller (`?xrRayPick`). */
+  const useRayPick = flagParam("xrRayPick");
+  /** Moltiplicatore movimento cursore (pinch). Override: `?xrCursorSens=2.5` */
+  const cursorSens = parseFloatParam("xrCursorSens", 2.4);
+  /** Pixel layout (0,0) = angolo alto-sinistra del pannello root. */
+  let cursorX = XR_PANEL.w / 2;
+  let cursorY = XR_PANEL.launcherSlot / 2;
+  let pinchStartCursorX = cursorX;
+  const lastHandWorld = new Vector3();
+  const panelWorldScratch = new Vector3();
+  const camToPanelScratch = new Vector3();
+
   /**
-   * Raycast sul pannello UIKit.
-   * IMPORTANT (Quest / WebXR): `XRFrame` è affidabile per `getPose` soprattutto dentro {@link XRInputSourceEvent}
-   * (`event.frame`). Usare `renderer.xr.getFrame()` negli handler `select*` fallisce spesso (frame fuori dal loop XR).
+   * Raycast dal controller (target ray).
+   * IMPORTANT (Quest / WebXR): `XRFrame` è affidabile per `getPose` soprattutto dentro {@link XRInputSourceEvent}.
    */
-  function hitTestFull(
+  function hitTestRay(
     frameOverride?: XRFrame | null,
     inputSourceOverride?: XRInputSource | null,
   ): { xrUi: XrUi | null; localX: number } {
@@ -1123,7 +1148,7 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       (typeof world.input?.getPrimaryInputSource === "function"
         ? world.input.getPrimaryInputSource("right") ?? world.input.getPrimaryInputSource("left")
         : null) ??
-      s.inputSources?.[0] ??
+      Array.from(s.inputSources ?? [])[0] ??
       null;
     if (!src?.targetRaySpace) return { xrUi: null, localX: 0 };
 
@@ -1152,8 +1177,96 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     return { xrUi, localX: localX_m };
   }
 
-  /** Linea + punto sul pannello: aggiornato ogni frame nel loop XR (serve “hover” visivo su Quest). */
+  /** Punto sul piano del pannello (layout px) → world. Assi: centro pannello, +Y su, +X a destra (schermo). */
+  function panelPixelToWorld(px: number, py: number, target: Vector3) {
+    const sc = uiRoot.scale.x;
+    const ps = XR_PIXEL_SIZE;
+    const lw = XR_PANEL.w;
+    const lh = stackH;
+    target.set((px - lw / 2) * ps * sc, ((lh / 2) - py) * ps * sc, 0).applyMatrix4(uiRoot.matrixWorld);
+    return target;
+  }
+
+  /** Pick da “cursore” 2D: raggio dalla camera attraverso il punto sul pannello (click / hover pinch). */
+  function hitTestCursorPickDetail(): {
+    xrUi: XrUi | null;
+    localX: number;
+    hitPoint: Vector3 | null;
+  } {
+    const cam = world.camera;
+    panelPixelToWorld(cursorX, cursorY, panelWorldScratch);
+    camToPanelScratch.copy(panelWorldScratch).sub(cam.position);
+    if (camToPanelScratch.lengthSq() < 1e-8) return { xrUi: null, localX: 0, hitPoint: null };
+    raycaster.ray.origin.copy(cam.position);
+    raycaster.ray.direction.copy(camToPanelScratch.normalize());
+    raycaster.far = 8;
+
+    Object3D.prototype.updateMatrixWorld.call(uiRoot as Object3D, true);
+    const hits = raycaster.intersectObject(uiRoot, true);
+    if (!hits.length) return { xrUi: null, localX: 0, hitPoint: null };
+    const hit = hits[0]!;
+    const xrUi = readXrUi(hit.object);
+    const localPoint = uiRoot.worldToLocal(hit.point.clone());
+    const localX_m = localPoint.x * uiRoot.scale.x;
+    return { xrUi, localX: localX_m, hitPoint: hit.point.clone() };
+  }
+
+  function hitTestCursorPick(): { xrUi: XrUi | null; localX: number } {
+    const d = hitTestCursorPickDetail();
+    return { xrUi: d.xrUi, localX: d.localX };
+  }
+
+  function hitTestFull(
+    frameOverride?: XRFrame | null,
+    inputSourceOverride?: XRInputSource | null,
+  ): { xrUi: XrUi | null; localX: number } {
+    if (useRayPick) return hitTestRay(frameOverride, inputSourceOverride);
+    return hitTestCursorPick();
+  }
+
+  function advanceCursorFromHandDelta(frame: XRFrame) {
+    const refSpace = world.renderer?.xr?.getReferenceSpace?.();
+    if (!refSpace || !pinchRaySource?.targetRaySpace) return;
+    const pose = frame.getPose(pinchRaySource.targetRaySpace, refSpace);
+    if (!pose) return;
+    tmpPos.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
+    const deltaWorld = tmpPos.clone().sub(lastHandWorld);
+    lastHandWorld.copy(tmpPos);
+
+    const rightW = new Vector3(1, 0, 0).applyQuaternion(uiRoot.quaternion);
+    const downW = new Vector3(0, -1, 0).applyQuaternion(uiRoot.quaternion);
+    const step = XR_PIXEL_SIZE * uiRoot.scale.x;
+    cursorX += (deltaWorld.dot(rightW) / step) * cursorSens;
+    cursorY += (deltaWorld.dot(downW) / step) * cursorSens;
+    cursorX = Math.max(0, Math.min(XR_PANEL.w, cursorX));
+    cursorY = Math.max(0, Math.min(stackH, cursorY));
+  }
+
+  /** Linea laser controller OPPURE reticolo cursore pinch sul pannello. */
   function updateXrPointerRayVisual() {
+    if (!useRayPick) {
+      rayLine.visible = false;
+      if (!pinchDown) {
+        hitDot.visible = false;
+        cursorReticle.visible = false;
+        return;
+      }
+      const det = hitTestCursorPickDetail();
+      panelPixelToWorld(cursorX, cursorY, panelWorldScratch);
+      cursorReticle.position.copy(panelWorldScratch);
+      cursorReticle.visible = true;
+      if (det.hitPoint && det.xrUi) {
+        hitDot.visible = true;
+        hitDot.position.copy(det.hitPoint);
+        (hitDot.material as MeshBasicMaterial).color.setHex(0x4ade80);
+        (cursorReticle.material as MeshBasicMaterial).color.setHex(0x4ade80);
+      } else {
+        hitDot.visible = false;
+        (cursorReticle.material as MeshBasicMaterial).color.setHex(0xffaa44);
+      }
+      return;
+    }
+
     if (xrHideRay) return;
     const frame = typeof world.renderer?.xr?.getFrame === "function" ? world.renderer.xr.getFrame() : null;
     const s = world.session ?? world.renderer?.xr?.getSession?.() ?? undefined;
@@ -1255,6 +1368,20 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     const e = ev as XRInputSourceEvent;
     pinchDown = true;
     pinchRaySource = e.inputSource ?? null;
+    const refSpace = world.renderer?.xr?.getReferenceSpace?.();
+    if (!useRayPick && refSpace && e.inputSource?.targetRaySpace) {
+      cursorX = XR_PANEL.w / 2;
+      cursorY = XR_PANEL.launcherSlot / 2;
+      pinchStartCursorX = cursorX;
+      const pose = e.frame.getPose(e.inputSource.targetRaySpace, refSpace);
+      if (pose) {
+        lastHandWorld.set(
+          pose.transform.position.x,
+          pose.transform.position.y,
+          pose.transform.position.z,
+        );
+      }
+    }
     const h = hitTestFull(e.frame, e.inputSource);
     pinchStartX = h.localX;
     pinchStartUi = h.xrUi;
@@ -1271,8 +1398,14 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       pinchRaySource.handedness === e.inputSource.handedness;
 
     if (pinchStartUi?.k === "launcher") {
-      if (Math.abs(dx) > 0.1) {
-        launcherKind = dx > 0 ? "badge" : "cards";
+      const swipeCards =
+        useRayPick && Math.abs(dx) > 0.1
+          ? dx > 0
+          : !useRayPick && Math.abs(cursorX - pinchStartCursorX) > 55
+            ? cursorX > pinchStartCursorX
+            : null;
+      if (swipeCards !== null) {
+        launcherKind = swipeCards ? "badge" : "cards";
         sheetOpen = true;
         build();
       } else if (endHit.xrUi?.k === "launcher") {
@@ -1315,12 +1448,23 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
     const delta = prev ? t - prev : 16;
     prev = t;
     if (!followCam) uiRoot.lookAt(world.camera.getWorldPosition(tmpPos));
-    if (pinchDown && pinchStartUi?.k === "launcher" && pinchRaySource) {
+    if (pinchDown && pinchStartUi?.k === "launcher" && pinchRaySource && useRayPick) {
       const frame = typeof world.renderer?.xr?.getFrame === "function" ? world.renderer.xr.getFrame() : null;
-      const { localX } = hitTestFull(frame, pinchRaySource);
+      const { localX } = hitTestRay(frame, pinchRaySource);
       const dx = localX - pinchStartX;
       if (Math.abs(dx) > 0.1) {
         const next = dx > 0 ? "badge" : "cards";
+        if (next !== launcherKind) {
+          launcherKind = next;
+          sheetOpen = true;
+          build();
+        }
+      }
+    }
+    if (pinchDown && pinchStartUi?.k === "launcher" && pinchRaySource && !useRayPick) {
+      const dxPx = cursorX - pinchStartCursorX;
+      if (Math.abs(dxPx) > 55) {
+        const next = dxPx > 0 ? "badge" : "cards";
         if (next !== launcherKind) {
           launcherKind = next;
           sheetOpen = true;
@@ -1333,6 +1477,10 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       applyUiDriftFloat(d.node, driftT, d.phase, reducedMotion);
     }
     uiRoot.update(delta);
+    if (pinchDown && !useRayPick && pinchRaySource) {
+      const frame = typeof world.renderer?.xr?.getFrame === "function" ? world.renderer.xr.getFrame() : null;
+      if (frame) advanceCursorFromHandDelta(frame);
+    }
     updateXrPointerRayVisual();
 
     frames++;
@@ -1342,7 +1490,8 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       const hint = opts.xrDomOverlayFallbackHint ?? "";
       hudEl.textContent =
         (hint ? `${hint}\n---\n` : "") +
-        `XR HUD\nsheet: ${sheetOpen ? launcherKind : "closed"} | poiTab: ${poiCat}\n` +
+        `XR HUD\ninput: ${useRayPick ? "ray" : "pinch-cursor"} | cursor: ${Math.round(cursorX)},${Math.round(cursorY)}\n` +
+        `sheet: ${sheetOpen ? launcherKind : "closed"} | poiTab: ${poiCat}\n` +
         `freezeSvc: ${freezeServiceQueues ? "yes" : "no"} | queueAge: ${lastQueueTimesOk ? `${Math.round((Date.now() - lastQueueTimesOk) / 1000)}s` : "never"}\n` +
         `pois: ${rawPois.length}\n` +
         `ui.scale: ${uiRoot.scale.x.toFixed(6)} y: ${uiRoot.position.y.toFixed(3)} z: ${uiRoot.position.z.toFixed(3)}\n` +
@@ -1367,17 +1516,18 @@ export function mountDesktopLikeSparkUi(world: World, opts: MountSparkUiOpts): (
       // ignore
     }
     uiRoot.removeFromParent();
-    if (!xrHideRay) {
-      try {
-        rayRoot.remove(rayLine);
-        rayRoot.remove(hitDot);
-        rayGeom.dispose();
-        rayLineMat.dispose();
-        hitDot.geometry.dispose();
-        (hitDot.material as MeshBasicMaterial).dispose?.();
-      } catch {
-        // ignore
-      }
+    try {
+      rayRoot.remove(rayLine);
+      rayRoot.remove(hitDot);
+      rayRoot.remove(cursorReticle);
+      rayGeom.dispose();
+      rayLineMat.dispose();
+      hitDot.geometry.dispose();
+      (hitDot.material as MeshBasicMaterial).dispose?.();
+      cursorReticle.geometry.dispose();
+      (cursorReticle.material as MeshBasicMaterial).dispose?.();
+    } catch {
+      // ignore
     }
     for (const m of dbgMeshes) {
       try {
