@@ -1,18 +1,18 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
-import { SPARK_ARTBOARD_WIDTH_PX } from "@/lib/layoutConstants";
+import { RAYBAN_HUD_SIZE_PX, SPARK_ARTBOARD_WIDTH_PX } from "@/lib/layoutConstants";
 
 type Props = {
   children: ReactNode;
-  /** Larghezza di progetto in px (default = sheet desktop `max-w-lg`). */
+  /** Larghezza di progetto in px (default = sheet Spark). */
   designWidth?: number;
   className?: string;
   innerClassName?: string;
 };
 
 /**
- * Mantiene il layout come sul desktop (artboard a larghezza fissa) e lo scala in modo uniforme
- * se lo schermo è più stretto, senza “strizzare” flex/grid come farebbe `50vw` o `max-w-full`.
+ * Mantiene il layout a larghezza fissa e lo scala in modo uniforme
+ * dentro il viewport HUD 600×600 (o lo spazio disponibile).
  */
 export function FixedArtboard({
   children,
@@ -29,8 +29,11 @@ export function FixedArtboard({
     if (!el) return;
 
     const update = () => {
-      const vw = typeof window !== "undefined" ? window.innerWidth : designWidth;
-      const pad = 16;
+      const vw =
+        typeof window !== "undefined"
+          ? Math.min(window.innerWidth, RAYBAN_HUD_SIZE_PX)
+          : designWidth;
+      const pad = 24;
       const s = Math.min(1, Math.max(0.22, (vw - pad * 2) / designWidth));
       setScale(s);
       setBoxH(el.offsetHeight);

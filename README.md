@@ -1,79 +1,26 @@
-# sPARK XR
+# sPARK — Meta Ray-Ban Display
 
 **Production:** [s-park-xr.vercel.app](https://s-park-xr.vercel.app) (Vercel project **s-park-xr**, branch **master**).
 
-Each build gets its own URL (e.g. `https://s-park-jtkz4h5tz-giulias-projects-957c6763.vercel.app`); the stable alias above always tracks latest production.
+Web app HUD for **Meta Ray-Ban Display** (additive waveguide, **600×600**).
 
-**This folder** targets the XR/WebXR app only. The desktop-only bundle lives under Vercel project **`s-park`** (branch `desktop-stable-pre-webxr`) and is no longer developed here.
+- Pure **black** backgrounds render as **transparent** on-device (no light).
+- No WebXR / Immersive AR path.
+- No fake passthrough video — the glasses show the real world behind the UI.
 
----
+Preview on desktop: set DevTools device size to **600×600**, or just open the page (HUD is centered). Navigate with **arrow keys + Enter** (same as Neural Band / captouch).
 
-Stack: React + TypeScript + Vite. Official plugins:
+Stack: React + TypeScript + Vite.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Scripts
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Docs
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- [Build Web Apps (Meta Wearables)](https://wearables.developer.meta.com/docs/develop/webapps/build)
+- [Test Web Apps](https://wearables.developer.meta.com/docs/develop/webapps/test/)

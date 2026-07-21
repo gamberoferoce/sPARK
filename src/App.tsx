@@ -8,12 +8,9 @@ import { calcolaDistanza, valutaTriggerAsciugatura } from "@/core/algorithm.js";
 import { valutaTuttiIPoi } from "@/core/notifications.js";
 import { PARCO } from "@/core/config.js";
 import type { Poi } from "@/types/poi";
-import { enterAR, exitAR } from "@/xr/iwsdk";
 import { filterPoisByProfile } from "@/lib/poiFilter";
 import { applySimulatedServiceQueues, SERVICE_QUEUE_FREEZE_ATTR_CLOSED_RATIO } from "@/lib/simulatedServiceQueues";
 import { FixedArtboard } from "@/components/FixedArtboard";
-
-const ONBOARDING_BG_VIDEO = `${import.meta.env.BASE_URL}videos/bg.mp4`;
 
 function LauncherButton({
   kind,
@@ -109,8 +106,9 @@ function LauncherButton({
 
         <button
           type="button"
-        aria-label={kind === "badge" ? "Open badges" : "Open cards"}
-          className="relative z-[1] grid h-10 w-10 place-items-center rounded-full border border-[#27272a] bg-[rgba(0,0,0,0.45)] text-zinc-100 select-none transition-transform duration-150 hover:scale-[1.03] hover:border-white/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+          tabIndex={0}
+          aria-label={kind === "badge" ? "Open badges" : "Open cards"}
+          className="focusable relative z-[1] grid h-10 w-10 place-items-center rounded-full border border-[#27272a] bg-[rgba(0,0,0,0.45)] text-zinc-100 select-none transition-transform duration-150 hover:scale-[1.03] hover:border-white/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           style={{ touchAction: "none" }}
           onPointerDown={(e) => {
             e.preventDefault();
@@ -214,8 +212,6 @@ function App() {
   const [mapOpen, setMapOpen] = useState(false);
   const [mapDest, setMapDest] = useState<Poi | null>(null);
   const [badgeScreenOpen, setBadgeScreenOpen] = useState(false);
-  const [xrOpen, setXrOpen] = useState(false);
-  const [xrError, setXrError] = useState<string | null>(null);
   const [launcherKind, setLauncherKind] = useState<"cards" | "badge">(() => {
     try {
       const v = localStorage.getItem("launcherKind");
@@ -731,42 +727,14 @@ function App() {
 
   if (!profilo) {
     return (
-      <div className="relative isolate min-h-[100dvh] w-full">
-        {/* Avoid fixed -z-10 as #root child (can paint behind root → only body black). */}
-        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-black" aria-hidden>
-          <video
-            className="absolute inset-0 h-full w-full object-cover opacity-90"
-            src={ONBOARDING_BG_VIDEO}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-          />
-          <div className="absolute inset-0 bg-black/35" />
-        </div>
+      <div className="relative isolate h-full w-full bg-black">
         <Onboarding onComplete={setProfilo} />
       </div>
     );
   }
 
   return (
-    <main className="relative mx-auto w-full max-w-lg overflow-x-visible px-4 py-4">
-      {/* Background video (hide in XR DOM overlay so only UI overlays passthrough) */}
-      {!xrOpen ? (
-        <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-black">
-          <video
-            className="h-full w-full object-cover opacity-90"
-            src="/videos/bg.mp4"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-          />
-          <div className="absolute inset-0 bg-black/35" />
-        </div>
-      ) : null}
+    <main className="relative mx-auto h-full w-full overflow-hidden px-3 py-3">
       {/* Launcher unico: tap apre, press+drag orizzontale cambia scheda */}
       <LauncherButton
         kind={launcherKind}
@@ -803,66 +771,11 @@ function App() {
         }}
       />
 
-      {/* Enter AR — flat UI only conceptually; footer hidden during XR session */}
-      <div className="fixed bottom-3 left-3 z-[95] pb-[env(safe-area-inset-bottom,0px)]">
-        <button
-          type="button"
-          className="rounded-full bg-black/40 px-4 py-2 text-xs font-semibold tracking-wide text-zinc-100 ring-1 ring-white/10 backdrop-blur hover:bg-white/10"
-          onClick={async () => {
-            setXrError(null);
-            try {
-              if (xrOpen) {
-                await exitAR();
-                setXrOpen(false);
-                return;
-              }
-              await enterAR();
-              setXrOpen(true);
-            } catch (e) {
-              const msg = e instanceof Error ? e.message : "XR failed to start.";
-              setXrError(msg);
-            }
-          }}
-        >
-          {xrOpen ? "Exit AR" : "Enter AR"}
-        </button>
+      <div className="fixed bottom-2 right-2 z-[95] max-w-[280px]">
+        <footer className="pointer-events-auto text-right text-[10px] leading-snug text-white/70">
+          <p className="m-0">Europa-Park · Queue-Times.com</p>
+        </footer>
       </div>
-
-      {!xrOpen ? (
-        <div className="fixed bottom-3 right-3 z-[95] max-w-[min(98vw,900px)] pb-[env(safe-area-inset-bottom,0px)]">
-          <footer className="pointer-events-auto text-right text-[12px] leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-            <p className="m-0">
-              Based on Europa-Park attractions.{" "}
-              <a
-                href="https://drive.google.com/drive/folders/18X0vvuc129E1qeFKHkeSa9ABXGdDzTaV?usp=drive_link"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-white/50 underline-offset-2 hover:text-white"
-              >
-                Click here
-              </a>{" "}
-              to open the badge gallery and save an attraction badge image to scan.
-            </p>
-            <p className="m-0 mt-1">
-              Real-time attraction queue data powered by{" "}
-              <a
-                href="https://queue-times.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-white/50 underline-offset-2 hover:text-white"
-              >
-                Queue-Times.com
-              </a>
-              . Food and services queue data are simulated.
-            </p>
-          </footer>
-        </div>
-      ) : null}
-      {xrError ? (
-        <div className="fixed left-1/2 bottom-3 z-[96] w-[min(92vw,520px)] -translate-x-1/2 rounded-2xl bg-black/65 px-4 py-3 text-xs font-semibold text-zinc-100 ring-1 ring-white/15 backdrop-blur">
-          XR error: {xrError}
-        </div>
-      ) : null}
 
       {poiPanelOpen ? (
         <div

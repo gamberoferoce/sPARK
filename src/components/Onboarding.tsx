@@ -338,7 +338,7 @@ export function Onboarding({ onComplete }: Props) {
   const StepIcon = STEP_ICONS[step];
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-20 flex min-h-[100dvh] items-center justify-center px-4">
+    <div className="pointer-events-none fixed inset-0 z-20 flex h-full items-center justify-center px-3">
       <div className="pointer-events-auto flex h-[42dvh] max-h-[42dvh] w-full max-w-lg flex-col bg-transparent">
         <main className="flex min-h-0 w-full flex-1 flex-col px-4">
           <div className="shrink-0 pb-3 pt-2">

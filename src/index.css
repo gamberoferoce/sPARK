@@ -6,64 +6,87 @@
 
 @layer base {
   :root {
-    --background: oklch(100% 0 0);
-    --foreground: oklch(14.5% 0 0);
-    --card: oklch(100% 0 0);
-    --card-foreground: oklch(14.5% 0 0);
-    --popover: oklch(100% 0 0);
-    --popover-foreground: oklch(14.5% 0 0);
-    --primary: oklch(20.5% 0 0);
-    --primary-foreground: oklch(98.5% 0 0);
-    --secondary: oklch(97% 0 0);
-    --secondary-foreground: oklch(20.5% 0 0);
-    --muted: oklch(97% 0 0);
-    --muted-foreground: oklch(55.6% 0 0);
-    --accent: oklch(97% 0 0);
-    --accent-foreground: oklch(20.5% 0 0);
+    --background: #000000;
+    --foreground: rgba(255, 255, 255, 0.92);
+    --card: rgba(0, 0, 0, 0.55);
+    --card-foreground: rgba(255, 255, 255, 0.92);
+    --popover: rgba(0, 0, 0, 0.7);
+    --popover-foreground: rgba(255, 255, 255, 0.92);
+    --primary: rgba(255, 255, 255, 0.92);
+    --primary-foreground: #000000;
+    --secondary: rgba(255, 255, 255, 0.08);
+    --secondary-foreground: rgba(255, 255, 255, 0.92);
+    --muted: rgba(255, 255, 255, 0.08);
+    --muted-foreground: rgba(255, 255, 255, 0.55);
+    --accent: rgba(255, 255, 255, 0.12);
+    --accent-foreground: rgba(255, 255, 255, 0.92);
     --destructive: oklch(57.7% 0.245 27.325deg);
-    --border: oklch(92.2% 0 0);
-    --input: oklch(92.2% 0 0);
-    --ring: oklch(70.8% 0 0);
+    --border: rgba(255, 255, 255, 0.18);
+    --input: rgba(255, 255, 255, 0.18);
+    --ring: rgba(0, 212, 255, 0.85);
     --radius: 1.75rem;
+    --hud-size: 600px;
   }
 
   * {
     @apply border-border;
   }
 
+  /**
+   * Meta Ray-Ban Display: additive waveguide — pure black (#000) emits no light →
+   * optically transparent on-device. Keep backgrounds black; UI bright/high-contrast.
+   * Spec: https://wearables.developer.meta.com/docs/develop/webapps/build
+   */
+  html {
+    background: #000;
+    height: 100%;
+  }
+
   body {
-    /* Nunito, peso 400, tracking un filo più largo (glasses / passthrough) */
-    @apply bg-background text-foreground font-sans antialiased font-normal tracking-[0.02em];
+    margin: 0;
+    width: var(--hud-size);
+    height: var(--hud-size);
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.92);
+    background: #000;
+    @apply font-sans antialiased font-normal tracking-[0.02em];
+  }
+
+  /* Desktop preview: center the 600×600 HUD on larger screens */
+  @media (min-width: 601px), (min-height: 601px) {
+    html {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100%;
+      min-height: 100dvh;
+    }
   }
 }
 
-html,
-body,
+/**
+ * Transform makes `position: fixed` descendants use #root as containing block,
+ * so the HUD stays inside 600×600 even when the desktop window is larger.
+ */
 #root {
-  height: 100%;
-}
-
-body {
-  margin: 0;
-  color: #e7e7ee;
+  position: relative;
+  width: var(--hud-size);
+  height: var(--hud-size);
+  overflow: hidden;
   background: #000;
+  transform: translateZ(0);
 }
 
-#root {
-  background: transparent;
+/* Neural Band / captouch ≈ arrow keys + Enter — focus rings must be obvious */
+.focusable {
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  border: 2px solid transparent;
+  outline: none;
 }
 
-/* WebXR DOM Overlay: must sit above the IWSDK canvas; compositor also uses this layer on supported runtimes */
-#root.xr-dom-overlay-host {
-  position: fixed;
-  inset: 0;
-  z-index: 2147483646;
-  isolation: isolate;
-  pointer-events: auto;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  min-height: 100dvh;
-  min-height: 100vh;
-  /* Passthrough can wash out fully transparent UIs */
-  background: rgba(0, 0, 0, 0.28);
+.focusable:focus,
+.focusable:focus-visible {
+  outline: none;
+  border-color: #00d4ff;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
 }
